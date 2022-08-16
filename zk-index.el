@@ -59,7 +59,8 @@ of setting up the ZK Index buffer."
   :type 'function)
 
 (defcustom zk-index-format-function 'zk-index--format-candidates
-  "Default formatting function for ZK-Index candidates."
+  "Default formatting function for ZK-Index candidates. The function should
+accept one argument: a list of file paths to format."
   :type 'function)
 
 (defcustom zk-index-invisible-ids t
