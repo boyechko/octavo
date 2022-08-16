@@ -171,6 +171,12 @@ specifying what is to be returned, FILES, a single file-path, as a string, or
 a list of file-paths."
   :type 'function)
 
+(defcustom zk-alist-function #'zk--alist
+  "Function accepting no arguments and returning an alist of Zettel files returned by
+`ZK--DIRECTORY-FILES', where each element is of the form
+(ID TITLE FULL-FILE-PATH)."
+  :type 'function)
+
 (make-obsolete-variable 'zk-grep-function "The use of the
   'zk-grep-function' variable is deprecated.
  'zk-search-function' should be used instead"
@@ -305,7 +311,7 @@ The ID is created using `zk-id-format'."
 Optional search for regexp STR in note title, case-insenstive.
 Takes an optional ZK-ALIST, for efficiency if `zk--id-list' is
 called in an internal loop."
-  (let ((zk-alist (or zk-alist (zk--alist)))
+  (let ((zk-alist (or zk-alist (funcall zk-alist-function)))
         (case-fold-search t)
         (ids))
     (dolist (item zk-alist)
@@ -453,7 +459,8 @@ supplied. Can take a PROMPT argument."
          (match-string-no-properties 1))))
 
 (defun zk--alist ()
-  "Return an alist ID, title, and file-path triples."
+  "The default `zk-alist-function' that returns an alist of ID, title, and
+file-path triples."
   (mapcar
    (lambda (file)
      (when (string= (file-name-extension file) zk-file-extension)
@@ -474,8 +481,7 @@ supplied. Can take a PROMPT argument."
 Takes a single ID, as a string, or a list of IDs. Takes an
 optional ZK-ALIST, for efficiency if `zk--parse-id' is called
 in an internal loop."
-  (let* ((zk-alist (or zk-alist
-                       (zk--alist)))
+  (let* ((zk-alist (or zk-alist (funcall zk-alist-function)))
          (zk-id-list (zk--id-list nil zk-alist))
          (return
           (cond ((eq target 'file-path)
