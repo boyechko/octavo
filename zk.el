@@ -113,7 +113,7 @@ Allows `zk-make-link-buttons' to be added to `find-file-hook', so
 buttons will be automatically created when a note is opened."
   :type 'boolean)
 
-(defcustom zk-id-time-string-format "%Y%m%d%H%M"
+(defcustom zk-id-format "%Y%m%d%H%M"
   "Format for new zk IDs.
 For supported options, please consult `format-time-string'.
 Note: the regexp to find zk IDs is set separately.
@@ -224,6 +224,8 @@ The string `%t' will be replaced by the note's title and `%i'
 will be replaced by its ID."
   :type 'string)
 
+;; FIXME: This needs to be re-evaluated if the user changes `zk-link-format' or
+;; `zk-id-regexp'.
 (defvar zk-link-regexp (format (regexp-quote zk-link-format) zk-id-regexp))
 
 (defvar zk-file-history nil)
@@ -285,8 +287,8 @@ With optional argument FILE."
 
 (defun zk--generate-id ()
   "Generate and return a zk ID.
-The ID is created using `zk-id-time-string-format'."
-  (let ((id (format-time-string zk-id-time-string-format)))
+The ID is created using `zk-id-format'."
+  (let ((id (format-time-string zk-id-format)))
     (while (zk--id-unavailable-p id)
       (setq id (1+ (string-to-number id)))
       (setq id (number-to-string id)))
