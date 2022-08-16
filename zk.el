@@ -165,6 +165,12 @@ Must take an optional prompt and a list of files"
 Must take a single STRING argument."
   :type 'function)
 
+(defcustom zk-parse-file-function #'zk--parse-file
+  "Function accepting two arguments: TARGET, a symbol (either 'id or 'title)
+specifying what is to be returned, FILES, a single file-path, as a string, or
+a list of file-paths."
+  :type 'function)
+
 (make-obsolete-variable 'zk-grep-function "The use of the
   'zk-grep-function' variable is deprecated.
  'zk-search-function' should be used instead"
@@ -392,7 +398,7 @@ subdirectories of `zk-directory' (with the exception of those matching
 
 (defun zk--grep-id-list (str)
   "Return a list of IDs for files containing STR."
-  (let ((ids (zk--parse-file 'id (zk--grep-file-list str))))
+  (let ((ids (funcall zk-parse-file-function 'id (zk--grep-file-list str))))
     (if (stringp ids) (list ids)
       ids)))
 
@@ -767,7 +773,9 @@ Optionally call a custom function by setting the variable
 By default, only a link is inserted. With prefix-argument, both
 link and title are inserted. See variable `zk-link-and-title'
 for additional configurations."
-  (interactive (list (zk--parse-file 'id (funcall zk-select-file-function "Insert link: "))))
+  (interactive
+   (list (funcall zk-parse-file-function
+                  'id (funcall zk-select-file-function "Insert link: "))))
   (let* ((pref-arg current-prefix-arg)
          (title (or title
                     (zk--parse-id 'title id))))
@@ -866,9 +874,9 @@ brackets \"[[\" initiates completion."
                    ((member (car arg) zk-id-list)
                     (car arg))
                    ((zk-file-p arg)
-                    (zk--parse-file 'id arg))
+                    (funcall zk-parse-file-function 'id arg))
                    (t (zk--id-at-point))))
-         (title (zk--parse-id 'title id)))
+         (title (funcall zk-parse-file-function 'title id)))
     (if id
         (progn
           (kill-new (format-spec zk-link-and-title-format
