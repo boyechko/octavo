@@ -177,6 +177,11 @@ a list of file-paths."
 (ID TITLE FULL-FILE-PATH)."
   :type 'function)
 
+(defcustom zk-id-list-search-key #'zk--alist-title
+  "Fuction accepting a `zk-alist-function' item and returning the string
+against which `zk--id-list' will attempt its matches. See `zk--id-list'."
+  :type 'function)
+
 (make-obsolete-variable 'zk-grep-function "The use of the
   'zk-grep-function' variable is deprecated.
  'zk-search-function' should be used instead"
@@ -306,19 +311,21 @@ The ID is created using `zk-id-format'."
       (setq id (number-to-string id)))
     id))
 
-(defun zk--id-list (&optional str zk-alist)
+(defun zk--id-list (&optional str zk-alist key)
   "Return a list of zk IDs for notes in `zk-directory'.
-Optional search for regexp STR in note title, case-insenstive.
-Takes an optional ZK-ALIST, for efficiency if `zk--id-list' is
-called in an internal loop."
+Optional search, case-insenstive, for regexp STR in the field of
+`zk-alist-function' items accessed with KEY, a function accepting an alist
+item as its sole argument. Takes an optional ZK-ALIST, for efficiency if
+`zk--id-list' is called in an internal loop."
   (let ((zk-alist (or zk-alist (funcall zk-alist-function)))
+        (key (or key zk-id-list-search-key))
         (case-fold-search t)
         (ids))
     (dolist (item zk-alist)
       (if str
-          (when (string-match str (cadr item))
-            (push (car item) ids))
-        (push (car item) ids)))
+          (when (string-match str (funcall key item))
+            (push (zk--alist-id item) ids))
+        (push (zk--alist-id item) ids)))
     ids))
 
 (defun zk--id-unavailable-p (str)
