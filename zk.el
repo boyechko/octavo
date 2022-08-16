@@ -94,6 +94,10 @@ for example, the file-name will be in the form
 rendered with spaces."
   :type 'string)
 
+(defcustom zk-file-name-title-optional nil
+  "If non-nil, file names can consist of IDs only, like \"202012341234\"."
+  :type 'boolean)
+
 (defcustom zk-enable-link-buttons t
   "When non-nil, valid zk-id links will be clickable buttons.
 Allows `zk-make-link-buttons' to be added to `find-file-hook', so
@@ -316,11 +320,16 @@ a regexp to replace the default, `zk-id-regexp'."
          (files (remq nil (mapcar
                            (lambda (x)
                              (when
-                                 (and (string-match (concat "\\(?1:"
-                                                            zk-id-regexp
-                                                            "\\).\\(?2:.*?\\)\\."
-                                                            zk-file-extension
-                                                            ".*")
+                                 (and (string-match
+                                       (concat "\\(?1:"
+                                               zk-id-regexp
+                                               "\\)"
+                                               (if zk-file-name-title-optional
+                                                   ""
+                                                 ".")
+                                               "\\(?2:.*?\\)\\."
+                                               zk-file-extension
+                                               ".*")
                                                     x)
                                       (not (string-match-p
                                             "^[.]\\|[#|~]$"
