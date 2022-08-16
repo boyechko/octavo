@@ -53,6 +53,11 @@
   "Name for ZK-Index buffer."
   :type 'string)
 
+(defcustom zk-index-print-header-function nil
+  "Optioinal function requiring no arguments that is called at the very start
+of setting up the ZK Index buffer."
+  :type 'function)
+
 (defcustom zk-index-format-function 'zk-index--format-candidates
   "Default formatting function for ZK-Index candidates."
   :type 'function)
@@ -300,6 +305,8 @@ FILES must be a list of filepaths. If nil, all files in
               (zk-find-file-by-id zk-default-backlink)))
           (generate-new-buffer buf-name)
           (with-current-buffer buf-name
+            (when (functionp zk-index-print-header-function)
+              (funcall zk-index-print-header-function))
             (zk-index-mode)
             (zk-index--sort list format-fn sort-fn)
             (setq truncate-lines t)
@@ -327,6 +334,8 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
     (with-current-buffer buf-name
       (setq line (line-number-at-pos))
       (erase-buffer)
+      (when (functionp zk-index-print-header-function)
+        (funcall zk-index-print-header-function))
       (zk-index--reset-mode-name)
       (zk-index--sort files format-fn sort-fn)
       (goto-char (point-min))
