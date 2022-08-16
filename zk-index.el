@@ -41,7 +41,9 @@
 (require 'zk)
 (require 'hl-line)
 
+;;;=============================================================================
 ;;; Custom Variables
+;;;=============================================================================
 
 (defgroup zk-index nil
   "Index and Desktop interfaces for zk."
@@ -161,7 +163,9 @@ To quickly change this setting, call `zk-index-desktop-add-toggle'."
   "Value of `mode-line-misc-info' at the start of the mode so we can reset to
 it.")
 
+;;;=============================================================================
 ;;; ZK-Index Major Mode Settings
+;;;=============================================================================
 
 (defvar zk-index-mode-map
   (let ((map (make-sparse-keymap)))
@@ -194,7 +198,9 @@ it.")
   (setq-local show-paren-mode nil)
   (setq cursor-type nil))
 
+;;;=============================================================================
 ;;; ZK-Desktop Minor Mode Settings
+;;;=============================================================================
 
 (defvar zk-index-desktop-map
   (let ((map (make-sparse-keymap)))
@@ -232,7 +238,9 @@ it.")
     map)
   "Keymap for ZK-Desktop buttons.")
 
-;;; Declarations
+;;;=============================================================================
+;;; Internal Variables
+;;;=============================================================================
 
 (defvar zk-index-last-sort-function nil)
 (defvar zk-index-last-format-function nil)
@@ -243,8 +251,9 @@ it.")
 (declare-function zk-file-p zk)
 (declare-function zk--grep-id-list zk)
 
-
+;;;=============================================================================
 ;;; Embark Integration
+;;;=============================================================================
 
 (defvar embark-multitarget-actions)
 (defvar embark-target-finders)
@@ -274,7 +283,9 @@ Adds zk-id as an Embark target, and adds `zk-id-map' and
     (let ((zk-id (match-string-no-properties 1)))
       `(zk-id ,zk-id . ,(cons (line-beginning-position) (line-end-position))))))
 
+;;;=============================================================================
 ;;; Formatting
+;;;=============================================================================
 
 (defun zk-index--format-candidates (&optional files format)
   "Return a list of FILES as formatted candidates, following FORMAT.
@@ -317,7 +328,9 @@ FILES must be a list of filepaths. If nil, all files in
                              `((?i . ,id)(?t . ,title)))
                 output))))))
 
+;;;=============================================================================
 ;;; Main Stack
+;;;=============================================================================
 
 ;;;###autoload
 (defun zk-index (&optional files format-fn sort-fn buf-name)
@@ -434,7 +447,9 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
                (propertize id 'invisible t)))
               (goto-char (match-end 0))))))))
 
-;;;; Utilities
+;;;=============================================================================
+;;; Utilities
+;;;=============================================================================
 
 (defun zk-index-button-display-action (file buffer)
   "Function to display FILE or BUFFER on button press in Index and Desktop."
@@ -483,7 +498,9 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
            (length (zk--id-list)))
         t nil)))
 
-;;; Index Search and Focus Functions
+;;;=============================================================================
+;;; Index Search and Focus (i.e. Query) Functions
+;;;=============================================================================
 
 ;;;; Index Search
 ;; narrow index based on search of notes' full text
@@ -514,7 +531,9 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
        (buffer-name))
     (user-error "Not in a ZK-Index")))
 
+;;;;-----------------------------------------------------------------------------
 ;;;; Low-level Query Functions
+;;;;-----------------------------------------------------------------------------
 
 (defun zk-index-query-files ()
   "Return narrowed list of notes, based on focus or search query."
@@ -638,7 +657,9 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
             (push (match-string-no-properties 0) ids)))
         ids))))
 
+;;;=============================================================================
 ;;; Index Sort Functions
+;;;=============================================================================
 
 (defun zk-index-sort-modified ()
   "Sort index by last modified."
@@ -725,7 +746,9 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
           (> (file-attribute-size (file-attributes a))
              (file-attribute-size (file-attributes b))))))
 
+;;;=============================================================================
 ;;; ZK-Index Keymap Commands
+;;;=============================================================================
 
 (defun zk-index-open-note ()
   "Open note."
@@ -844,9 +867,11 @@ If `zk-index-auto-scroll' is non-nil, show note in other window."
       (forward-button -1))))
 
 
+;;;=============================================================================
 ;;; ZK-Desktop
 ;; index's more flexible, savable cousin; a place to collect and order notes
 ;; in the form of links
+;;;=============================================================================
 
 ;;;###autoload
 (defun zk-index-desktop ()
@@ -1095,7 +1120,9 @@ With prefix-argument, raise ZK-Desktop in other frame."
           (switch-to-buffer-other-frame buffer))
       (switch-to-buffer buffer))))
 
+;;;=============================================================================
 ;;; ZK-Desktop Keymap Commands
+;;;=============================================================================
 
 (defun zk-index-move-line-down ()
   "Move line at point down in ZK-Desktop buffer."
