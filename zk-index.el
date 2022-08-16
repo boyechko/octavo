@@ -543,35 +543,24 @@ recent items are in the front.")
   (let* ((command this-command)
          (scope (if (zk-index-narrowed-p (buffer-name))
                     (zk-index--current-id-list (buffer-name))
-                  (progn
-                    (setq zk-index-last-query nil)
-                    (zk--id-list))))
-         (string (read-string
-                  (cond
-                   ((eq command 'zk-index-focus)
-                    "Focus: ")
-                   ((eq command 'zk-index-search)
-                    "Search: "))
-                  nil 'zk-search-history))
+                  (setq zk-index-query-terms nil)
+                  (zk--id-list)))
+         (string (read-string (cond ((eq command 'zk-index-focus)
+                                     "Focus: ")
+                                    ((eq command 'zk-index-search)
+                                     "Search: "))
+                              nil 'zk-search-history))
          (query (cond
                  ((eq command 'zk-index-focus)
                   (zk--id-list string))
                  ((eq command 'zk-index-search)
                   (zk--grep-id-list string))))
-         (ids
-          (mapcar
-           (lambda (x)
-             (when (member x scope)
-               x))
-           query))
+         (ids (mapcar (lambda (x) (when (member x scope) x))
+                      query))
          (files (zk--parse-id 'file-path (remq nil ids))))
     (add-to-history 'zk-search-history string)
     (when files
-      (let ((mode-line
-             (cond ((eq command 'zk-index-focus)
-                    (zk-index-focus-mode-line string))
-                   ((eq command 'zk-index-search)
-                    (zk-index-search-mode-line string)))))
+      (let ((mode-line (zk-index-query-mode-line command string)))
         (setq zk-index-query-mode-line mode-line)
         (zk-index--set-mode-line mode-line)
         (zk-index--reset-mode-name)))
@@ -580,61 +569,38 @@ recent items are in the front.")
     (or files
         (error "No matches for \"%s\"" string))))
 
-(defun zk-index-focus-mode-line (string)
-  "Add STRING to modeline for `zk-index-focus'."
-  (cond
-   ;;same
-   ((eq zk-index-last-query 'focus)
-    ;;outcome
-    (setq zk-index-last-focus-terms
-          (if zk-index-last-focus-terms
-              (concat zk-index-last-focus-terms "\" + \"" string)
-            string))
-    (concat "[Focus: \"" zk-index-last-focus-terms "\"]"))
-   ;;mix
-   ((eq zk-index-last-query 'search)
-    ;;outcome
-    (setq zk-index-last-query 'focus)
-    (setq zk-index-last-focus-terms
-          (if zk-index-last-focus-terms
-              (concat zk-index-last-focus-terms "\" + \"" string)
-            string))
-    (concat "[Search: \"" zk-index-last-search-terms "\" |"
-            " Focus: \"" zk-index-last-focus-terms "\"]"))
-   ;;neither
-   ((not zk-index-last-query)
-    ;; outcome
-    (setq zk-index-last-query 'focus)
-    (setq zk-index-last-focus-terms string)
-    (concat "[Focus: \"" string "\"]"))))
-
-(defun zk-index-search-mode-line (string)
-  "Add STRING to modeline for `zk-index-search'."
-  (cond
-   ;;same
-   ((eq zk-index-last-query 'search)
-    ;;outcome
-    (setq zk-index-last-search-terms
-          (if zk-index-last-search-terms
-              (concat zk-index-last-search-terms "\" + \"" string)
-            string))
-    (concat "[Search: \"" zk-index-last-search-terms "\"]"))
-   ;;mix
-   ((eq zk-index-last-query 'focus)
-    ;;outcome
-    (setq zk-index-last-query 'search)
-    (setq zk-index-last-search-terms
-          (if zk-index-last-search-terms
-              (concat zk-index-last-search-terms "\" + \"" string)
-            string))
-    (concat "[Focus: \"" zk-index-last-focus-terms "\" |"
-            " Search: \"" zk-index-last-search-terms "\"]"))
-   ;;neither
-   ((not zk-index-last-query)
-    ;; outcome
-    (setq zk-index-last-query 'search)
-    (setq zk-index-last-search-terms string)
-    (concat "[Search: \"" string "\"]"))))
+(defun zk-index-query-mode-line (query-command string)
+  "After narrowing with QUERY-COMMAND (either `zk-index-focus' or
+`zk-search-focus', add STRING to the mode line as appropriate."
+  (push (cons query-command string) zk-index-query-terms)
+  ;; Sort the different terms into two lists
+  (let (focused
+        searched)
+    (dolist (term zk-index-query-terms)
+      (if (equal (car term) 'zk-index-focus)
+          (push term focused)
+        (push term searched)))
+    ;; Format each list and update appropriate list
+    (let* ((formatted
+            (mapcar (lambda (term-list)
+                      (when term-list
+                        ;; (CMD . STRING)
+                        (cons (caar term-list)
+                              (mapconcat #'cdr term-list "\" + \""))))
+                    ;;      CAR     CDR
+                    (list focused searched))))
+      (concat "["
+              (mapconcat (lambda (query)
+                           (when query
+                             (concat
+                              (capitalize
+                               (caddr
+                                (split-string (symbol-name (car query)) "-")))
+                              ": \""
+                              (cdr query))))
+                (remq nil formatted)
+                "\" | ")
+              "\"]"))))
 
 (defun zk-index--set-mode-line (string)
   "Add STRING to mode-line in `zk-index-mode'."
@@ -645,8 +611,7 @@ recent items are in the front.")
   "Reset mode-line in `zk-index-mode'."
   (setq-local mode-line-misc-info zk-index-mode-line-orig)
   (setq zk-index-query-mode-line nil
-        zk-index-last-focus-terms nil
-        zk-index-last-search-terms nil))
+        zk-index-query-terms nil))
 
 (defun zk-index--current-id-list (buf-name)
   "Return list of IDs for index in BUF-NAME, as filepaths."
