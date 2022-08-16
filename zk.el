@@ -483,6 +483,18 @@ file-path triples."
          ,file)))
    (zk--directory-files t)))
 
+(defun zk--alist-id (item)
+  "Returns the id part of an item generated with `zk-alist-function'."
+  (car item))
+
+(defun zk--alist-title (item)
+  "Returns the title part of an item generated with `zk-alist-function'."
+  (cadr item))
+
+(defun zk--alist-file-path (item)
+  "Returns the file path part of an item generated with `zk-alist-function'."
+  (caddr item))
+
 (defun zk--parse-id (target ids &optional zk-alist)
   "Return TARGET, either `file-path or `title, from files with IDS.
 Takes a single ID, as a string, or a list of IDs. Takes an
@@ -494,22 +506,22 @@ in an internal loop."
           (cond ((eq target 'file-path)
                  (cond ((stringp ids)
                         (if (member ids zk-id-list)
-                            (cddr (assoc ids zk-alist))
+                            (zk--alist-file-path (assoc ids zk-alist))
                           (user-error "No file associated with %s" ids)))
                        ((listp ids)
                         (mapcar
                          (lambda (x)
-                           (caddr (assoc x zk-alist)))
+                           (zk--alist-file-path (assoc x zk-alist)))
                          ids))))
                 ((eq target 'title)
                  (cond ((stringp ids)
                         (if (member ids zk-id-list)
-                            (cadr (assoc ids zk-alist))
+                            (zk--alist-title (assoc ids zk-alist))
                           (user-error "No file associated with %s" ids)))
                        ((listp ids)
                         (mapcar
                          (lambda (x)
-                           (cadr (assoc x zk-alist)))
+                           (zk--alist-title (assoc x zk-alist)))
                          ids)))))))
     (if (eq 1 (length return))
         (car return)
