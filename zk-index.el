@@ -500,11 +500,10 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   "Narrow index based on regexp search of note contents."
   (interactive)
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh
-       (zk-index-query-files)
-       zk-index-last-format-function
-       zk-index-last-sort-function
-       (buffer-name))
+      (zk-index-refresh (zk-index-query-files)
+                        zk-index-last-format-function
+                        zk-index-last-sort-function
+                        (buffer-name))
     (user-error "Not in a ZK-Index")))
 
 ;;;; Index Focus
@@ -515,11 +514,10 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   "Narrow index based on regexp search of note titles."
   (interactive)
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh
-       (zk-index-query-files)
-       zk-index-last-format-function
-       zk-index-last-sort-function
-       (buffer-name))
+      (zk-index-refresh (zk-index-query-files)
+                        zk-index-last-format-function
+                        zk-index-last-sort-function
+                        (buffer-name))
     (user-error "Not in a ZK-Index")))
 
 ;;;;-----------------------------------------------------------------------------
