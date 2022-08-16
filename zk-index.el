@@ -141,12 +141,22 @@ To quickly change this setting, call `zk-index-desktop-add-toggle'."
   '((t :inherit default))
   "Face used for buttons in `zk-index-desktop-mode'.")
 
-;;; ZK-Index Major Mode Settings
+;;; Internal Variables
 
-(defvar zk-index-last-query nil)
-(defvar zk-index-last-focus-terms nil)
-(defvar zk-index-last-search-terms nil)
-(defvar zk-index-mode-line-orig nil)
+(defvar zk-index-last-query nil
+  "Type of last query: either 'FOCUS or 'SEARCH.")
+
+(defvar zk-index-last-focus-terms nil
+  "A string containing all of the currently active focus query terms.")
+
+(defvar zk-index-last-search-terms nil
+  "A string containing all of the currently active search query terms.")
+
+(defvar zk-index-mode-line-orig nil
+  "Value of `mode-line-misc-info' at the start of the mode so we can reset to
+it.")
+
+;;; ZK-Index Major Mode Settings
 
 (defvar zk-index-mode-map
   (let ((map (make-sparse-keymap)))
