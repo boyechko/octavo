@@ -308,6 +308,7 @@ FILES must be a list of filepaths. If nil, all files in
               (zk-find-file-by-id zk-default-backlink)))
           (generate-new-buffer buf-name)
           (with-current-buffer buf-name
+            (setq default-directory (expand-file-name zk-directory))
             (when (functionp zk-index-print-header-function)
               (funcall zk-index-print-header-function))
             (zk-index-mode)
