@@ -150,15 +150,6 @@ To quickly change this setting, call `zk-index-desktop-add-toggle'."
 
 ;;; Internal Variables
 
-(defvar zk-index-last-query nil
-  "Type of last query: either 'FOCUS or 'SEARCH.")
-
-(defvar zk-index-last-focus-terms nil
-  "A string containing all of the currently active focus query terms.")
-
-(defvar zk-index-last-search-terms nil
-  "A string containing all of the currently active search query terms.")
-
 (defvar zk-index-mode-line-orig nil
   "Value of `mode-line-misc-info' at the start of the mode so we can reset to
 it.")
@@ -534,6 +525,20 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
 ;;;;-----------------------------------------------------------------------------
 ;;;; Low-level Query Functions
 ;;;;-----------------------------------------------------------------------------
+
+(defvar zk-index-query-terms nil
+  "An ordered list of items in the form of (COMMAND . TERM), where COMMAND is
+'ZK-INDEX-FOCUS or 'ZK-INDEX-SEARCH, and TERM is the search string. More
+recent items are in the front.")
+
+(defvar zk-index-last-query nil
+  "Type of last query: either 'FOCUS or 'SEARCH.")
+
+(defvar zk-index-last-focus-terms nil
+  "A string containing all of the currently active focus query terms.")
+
+(defvar zk-index-last-search-terms nil
+  "A string containing all of the currently active search query terms.")
 
 (defun zk-index-query-files ()
   "Return narrowed list of notes, based on focus or search query."
