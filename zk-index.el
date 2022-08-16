@@ -51,37 +51,45 @@
 
 (defcustom zk-index-buffer-name "*ZK-Index*"
   "Name for ZK-Index buffer."
-  :type 'string)
+  :type 'string
+  :group 'zk-index)
 
 (defcustom zk-index-print-header-function nil
   "Optioinal function requiring no arguments that is called at the very start
 of setting up the ZK Index buffer."
-  :type 'function)
+  :type 'function
+  :group 'zk-index)
 
 (defcustom zk-index-format-function 'zk-index--format-candidates
   "Default formatting function for ZK-Index candidates. The function should
 accept one argument: a list of file paths to format."
-  :type 'function)
+  :type 'function
+  :group 'zk-index)
 
 (defcustom zk-index-invisible-ids t
   "If non-nil, IDs will not be visible in the index."
-  :type 'boolean)
+  :type 'boolean
+  :group 'zk-index)
 
 (defcustom zk-index-format "%t [[%i]]"
   "Default format for candidates in the index."
-    :type 'string)
+  :type 'string
+  :group 'zk-index)
 
 (defcustom zk-index-prefix "-> "
   "String to prepend to note names in ZK-Index."
-    :type 'string)
+  :type 'string
+  :group 'zk-index)
 
 (defcustom zk-index-auto-scroll t
   "Enable automatically showing note at point in ZK-Index."
-  :type 'boolean)
+  :type 'boolean
+  :group 'zk-index)
 
 (defcustom zk-index-view-hide-cursor t
   "Hide cursor in `zk-index-view-mode'."
-  :type 'boolean)
+  :type 'boolean
+  :group 'zk-index)
 
 (defcustom zk-index-button-display-function 'zk-index-button-display-action
   "Function called when buttons pressed in ZK-Index and ZK-Desktop.
@@ -89,26 +97,31 @@ The function is called by `zk-index-button-action'. A custom
 function must take two arguments, FILE and BUFFER respectively.
 See the default function `zk-index-button-display-action' for an
 example."
-  :type 'function)
+  :type 'function
+  :group 'zk-index)
 
 (defcustom zk-index-desktop-directory nil
   "Directory for saved ZK-Desktops."
-  :type 'directory)
+  :type 'directory
+  :group 'zk-index)
 
 (defcustom zk-index-desktop-basename "*ZK-Desktop:"
   "Basename for ZK-Desktops.
 The names of all ZK-Desktops should begin with this string."
-  :type 'string)
+  :type 'string
+  :group 'zk-index)
 
 (defcustom zk-index-desktop-prefix ""
   "String to prepend to note names in ZK-Desktop."
-  :type 'string)
+  :type 'string
+  :group 'zk-index)
 
 (defcustom zk-index-desktop-major-mode nil
   "Name of major-mode for ZK-Desktop buffers.
 The value should be a symbol that is a major mode command.
 If nil, buffers will be in `fundamental-mode'."
-  :type 'function)
+  :type 'function
+  :group 'zk-index)
 
 (defcustom zk-index-desktop-add-pos 'append
   "Behavior for placement of notes in ZK-Desktop via `zk-index-send-to-desktop'.
@@ -121,7 +134,8 @@ Options:
 To quickly change this setting, call `zk-index-desktop-add-toggle'."
   :type '(choice (const :tag "Append" append)
                  (const :tag "Prepend" prepend)
-                 (const :tag "At point" at-point)))
+                 (const :tag "At point" at-point))
+  :group 'zk-index)
 
 (defface zk-index-desktop-button
   '((t :inherit default))
