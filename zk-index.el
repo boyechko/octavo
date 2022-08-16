@@ -49,6 +49,11 @@
   :group 'files
   :prefix "zk-index")
 
+(defcustom zk-index-mode-name "ZK-Index"
+  "What to set `mode-name' in `zk-index-mode'."
+  :type 'string
+  :group 'zk-index)
+
 (defcustom zk-index-buffer-name "*ZK-Index*"
   "Name for ZK-Index buffer."
   :type 'string
@@ -678,7 +683,7 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
 
 (defun zk-index--reset-mode-name ()
   "Reset `mode-name' in `zk-index-mode'."
-  (setq mode-name "ZK-Index"))
+  (setq mode-name zk-index-mode-name))
 
 (defun zk-index--current-file-list ()
   "Return list files in current index."
