@@ -152,11 +152,7 @@ To quickly change this setting, call `zk-index-desktop-add-toggle'."
 
 (defvar zk-index-mode-line-orig nil
   "Value of `mode-line-misc-info' at the start of the mode so we can reset to
-it.")
-
-;;;=============================================================================
-;;; ZK-Index Major Mode Settings
-;;;=============================================================================
+it when not using `mode-line-misc-info'.")
 
 (defvar zk-index-mode-map
   (let ((map (make-sparse-keymap)))
@@ -229,13 +225,10 @@ it.")
     map)
   "Keymap for ZK-Desktop buttons.")
 
-;;;=============================================================================
-;;; Internal Variables
-;;;=============================================================================
+;;; Declarations
 
-(defvar zk-index-last-sort-function nil)
-(defvar zk-index-last-format-function nil)
 (defvar zk-index-query-mode-line nil)
+(defvar zk-index-query-terms nil)
 (defvar zk-index-desktop-current nil)
 (defvar zk-search-history)
 
@@ -520,9 +513,7 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
                         (buffer-name))
     (user-error "Not in a ZK-Index")))
 
-;;;;-----------------------------------------------------------------------------
 ;;;; Low-level Query Functions
-;;;;-----------------------------------------------------------------------------
 
 (defvar zk-index-query-terms nil
   "An ordered list of items in the form of (COMMAND . TERM), where COMMAND is
@@ -537,6 +528,11 @@ recent items are in the front.")
 
 (defvar zk-index-last-search-terms nil
   "A string containing all of the currently active search query terms.")
+
+(defvar zk-index-query-terms nil
+  "An ordered list of items in the form of (COMMAND . TERM), where COMMAND is
+'ZK-INDEX-FOCUS or 'ZK-INDEX-SEARCH, and TERM is the search string. More
+recent items are in the front.")
 
 (defun zk-index-query-files ()
   "Return narrowed list of notes, based on focus or search query."
@@ -570,8 +566,8 @@ recent items are in the front.")
         (error "No matches for \"%s\"" string))))
 
 (defun zk-index-query-mode-line (query-command string)
-  "After narrowing with QUERY-COMMAND (either `zk-index-focus' or
-`zk-search-focus', add STRING to the mode line as appropriate."
+  "Generate new mode line string after QUERY-COMMAND (either `zk-index-focus'
+or `zk-search-focus') narrowed the index with STRING"
   (push (cons query-command string) zk-index-query-terms)
   ;; Sort the different terms into two lists
   (let (focused
@@ -598,7 +594,10 @@ recent items are in the front.")
                                 (split-string (symbol-name (car query)) "-")))
                               ": \""
                               (cdr query))))
-                (remq nil formatted)
+                ;; Put the last query type at the end
+                (sort (remq nil formatted)
+                      (lambda (a b)
+                        (not (equal (car a) query-command))))
                 "\" | ")
               "\"]"))))
 
