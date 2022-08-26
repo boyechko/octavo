@@ -44,11 +44,12 @@
 ;; Linking to such a note involves nothing more than placing the string
 ;; [[202012091130]] into another note in the directory.
 
-;; A note's filename is constructed as follows: the zk ID number followed by
-;; the title of the note followed by the file extension, e.g. "202012091130
-;; On the origin of species.txt". A key consequence of this ID/linking scheme
-;; is that a note's title can change without any existing links to the note
-;; being broken, wherever they might be in the directory.
+;; By default (see `zk-file-name-id-only'), note's filename is constructed as
+;; follows: the zk ID number followed by the title of the note followed by
+;; the file extension, e.g. "202012091130 On the origin of species.txt". A
+;; key consequence of this ID/linking scheme is that a note's title can
+;; change without any existing links to the note being broken, wherever they
+;; might be in the directory.
 
 ;; The directory is a single folder containing all notes.
 
@@ -104,6 +105,22 @@ for example, the file-name will be in the form
 rendered with spaces."
   :type 'string)
 
+(defcustom zk-file-name-id-only nil
+  "If non-nil, file names consist of IDs only without the title.
+Note: If you change this value, also set `zk-parse-file-function' to
+`zk-parse-file-header' or another function that can return the note's
+title."
+  :type 'boolean)
+
+(defcustom zk-parse-file-function #'zk-parse-file-name
+  "Function called by `zk--parse-file' to return id or title of given FILE.
+Must take two arguments TARGET (either `id or `title) and FILE."
+  :type 'function)
+
+(defcustom zk-new-file-path-function #'zk-new-file-path
+  "Given a zk ID and TITLE, return a full file path."
+  :type 'function)
+
 (defcustom zk-enable-link-buttons t
   "When non-nil, valid zk-id links will be clickable buttons.
 Allows `zk-make-link-buttons' to be added to `find-file-hook', so
@@ -134,6 +151,13 @@ A user-defined function should use `insert' to insert a string or
 strings. The arguments NEW-ID, TITLE, and ORIG-ID can be used to
 those corresponding values from `zk-new-note' available for
 insertion. See `zk-new-note-header' for an example."
+  :type 'function)
+
+(defcustom zk-update-note-header-function #'zk-update-note-header
+  "Function called by `zk-rename-note' to update title in header.
+A user-defined function should locate the existing header and
+modify it according to the arguments ID and NEW-TITLE passed to
+it. See `zk-update-note-header' for an example."
   :type 'function)
 
 (defcustom zk-new-note-link-insert 'ask
@@ -277,6 +301,7 @@ otherwise just match against `zk-id-regexp'."
                      (signal 'wrong-type-argument '(file))))))
     (and file
          (file-exists-p file)
+         (string-match-p zk-file-extension (file-name-extension file))
          (string-match-p zk-id-regexp file)
          (or (not strict)
              (file-in-directory-p file zk-directory)))))
@@ -289,6 +314,21 @@ The ID is created using `zk-id-time-string-format'."
       (setq id (1+ (string-to-number id)))
       (setq id (number-to-string id)))
     id))
+
+(defun zk-new-file-path (id title)
+  "Generate file-path for new note.
+Takes an ID and TITLE and returns a full file path, based on
+values of `zk-directory', `zk-file-name-separator', and
+`zk-file-name-separator'."
+  (replace-regexp-in-string " "
+                            zk-file-name-separator
+                            (format "%s/%s%s.%s"
+                                    zk-directory
+                                    id
+                                    (if title
+                                        (concat zk-file-name-separator title)
+                                      "")
+                                    zk-file-extension)))
 
 (defun zk--id-list (&optional str zk-alist)
   "Return a list of zk IDs for notes in `zk-directory'.
@@ -336,22 +376,15 @@ file-paths."
              (lambda (dir)
                (not (string-match
                      zk-directory-recursive-ignore-dir-regexp
-                     dir))))))
-         (files
-          (remq nil (mapcar
-                     (lambda (x)
-                       (when (and (string-match (concat "\\(?1:"
-                                                        zk-id-regexp
-                                                        "\\).\\(?2:.*?\\)\\."
-                                                        zk-file-extension
-                                                        ".*")
-                                                x)
-                                  (not (string-match-p
-                                        "^[.]\\|[#|~]$"
-                                        (file-name-nondirectory x))))
-                         x))
-                     list))))
-    files))
+                     dir)))))))
+    (remq nil (mapcar
+               (lambda (x)
+                 (when (and (zk-file-p x)
+                            (not (string-match-p
+                                  "^[.]\\|[#|~]$"
+                                  (file-name-nondirectory x))))
+                   x))
+               list))))
 
 (defun zk--current-notes-list ()
   "Return list of files for currently open notes."
@@ -379,7 +412,8 @@ file-paths."
 (defun zk--grep-id-list (str)
   "Return a list of IDs for files containing STR."
   (let ((ids (zk--parse-file 'id (zk--grep-file-list str))))
-    (if (stringp ids) (list ids)
+    (if (stringp ids)
+        (list ids)
       ids)))
 
 (defun zk--grep-tag-list ()
@@ -415,14 +449,7 @@ supplied. Can take a PROMPT argument."
 (defun zk--group-function (file transform)
   "TRANSFORM completion candidate FILE to note title."
   (if transform
-      (progn
-        (string-match (concat "\\(?1:"
-                              zk-id-regexp
-                              "\\).\\(?2:.*?\\)\\."
-                              zk-file-extension
-                              ".*")
-                      file)
-        (match-string 2 file))
+      (zk--parse-file 'title file)
     "zk"))
 
 (defun zk--id-at-point ()
@@ -434,20 +461,12 @@ supplied. Can take a PROMPT argument."
 
 (defun zk--alist ()
   "Return an alist ID, title, and file-path triples."
-  (mapcar
-   (lambda (file)
-     (when (string= (file-name-extension file) zk-file-extension)
-       (string-match (concat "\\(?1:"
-                             zk-id-regexp
-                             "\\).\\(?2:.*?\\)\\."
-                             zk-file-extension
-                             ".*")
-                     file)
-       `(,(match-string-no-properties 1 file)
-         ,(replace-regexp-in-string zk-file-name-separator " "
-                                    (match-string-no-properties 2 file))
-         ,file)))
-   (zk--directory-files t)))
+  (mapcar (lambda (file)
+            (when (zk-file-p file)
+              (list (zk--parse-file 'id file)
+                    (zk--parse-file 'title file)
+                    file)))
+          (zk--directory-files t)))
 
 (defun zk--parse-id (target ids &optional zk-alist)
   "Return TARGET, either `file-path or `title, from files with IDS.
@@ -482,33 +501,58 @@ in an internal loop."
         (car return)
       return)))
 
-(defun zk--parse-file (target files)
-  "Return TARGET, either `id or `title, from FILES.
+(defun zk--parse-file (target file-or-files)
+  "Return TARGET, either `id or `title, from FILE-OR-FILES.
 Takes a single file-path, as a string, or a list of file-paths.
+On each file, call `zk-parse-file-function' and collect the results."
+  (let ((result
+         (mapcar (lambda (file)
+                   (funcall zk-parse-file-function target file))
+                 (if (listp file-or-files)
+                     file-or-files
+                   (list file-or-files)))))
+    (if (null (cdr result))             ; list with single element
+        (car result)
+      result)))
+
+(defun zk-parse-file-name (target file)
+  "Return TARGET, either `id or `title, from the given FILE.
 A note's title is understood to be the portion of its filename
-following the zk ID, in the format `zk-id-regexp', and preceding the
-file extension."
-  (let* ((target (pcase target
-                   ('id '1)
-                   ('title '2)))
-         (files (if (listp files)
-                    files
-                  (list files)))
-         (return
-          (mapcar
-           (lambda (file)
-             (string-match (concat "\\(?1:"
-                                   zk-id-regexp
-                                   "\\).\\(?2:.*?\\)\\."
-                                   zk-file-extension
-                                   ".*")
-                           file)
-             (replace-regexp-in-string zk-file-name-separator " "
-                                       (match-string target file)))
-           files)))
-    (if (eq 1 (length return))
-        (car return)
-      return)))
+following the zk ID, in the format `zk-id-regexp', and preceding
+the file extension. This is the default value of
+`zk-parse-file-function'."
+  (when (string-match (concat "\\(?1:" zk-id-regexp "\\)"
+                              zk-file-name-separator
+                              (if zk-file-name-id-only
+                                  "*"   ; i.e. separator is optional
+                                "")
+                              "\\(?2:.*?\\)\\."
+                              zk-file-extension)
+                      file)
+    (pcase target
+      ('id    (match-string 1 file))
+      ('title (unless (string-empty-p (match-string 2 file))
+                (replace-regexp-in-string zk-file-name-separator
+                                          " "
+                                          (match-string 2 file)))))))
+
+(defun zk-parse-file-header (target file)
+  "Return TARGET, either `id or `title, from the given FILE.
+Unlike `zk-parse-file-name', attempt to get the note
+title from the file header."
+  (when (string-match zk-id-regexp file)
+    (let ((id (match-string 0 file)))
+      (if (eql target 'id)
+          id
+        (when (file-exists-p file)
+          (with-temp-buffer
+            (insert-file-contents file)
+            (goto-char (point-min))
+            (when (re-search-forward
+                   (concat id (regexp-quote zk-file-name-separator))
+                   nil t)
+              (buffer-substring-no-properties
+               (match-end 0) (line-end-position)))))))))
 
 ;;; Buttons
 
@@ -584,15 +628,10 @@ Optional TITLE argument."
                    (buffer-substring
                     (point)
                     (point-max)))))
-         (file-name (replace-regexp-in-string " "
-                                              zk-file-name-separator
-                                              (concat
-                                               (format "%s/%s%s%s.%s"
-                                                       zk-directory
-                                                       new-id
-                                                       zk-file-name-separator
-                                                       title
-                                                       zk-file-extension)))))
+         (file-name (funcall zk-new-file-path-function
+                             new-id
+                             (when (not zk-file-name-id-only)
+                               title))))
     (unless orig-id
       (setq orig-id zk-default-backlink))
     (when (use-region-p)
@@ -624,6 +663,15 @@ Optionally use ORIG-ID for backlink."
       (newline)))
   (insert "===\n\n"))
 
+(defun zk-update-note-header (new-title id)
+  "Update the title in an existing note with given ID to NEW-TITLE."
+  (save-excursion
+    (goto-char (point-min))
+    (re-search-forward id)
+    (re-search-forward " ")
+    (delete-region (point) (line-end-position))
+    (insert new-title)))
+
 ;;;###autoload
 (defun zk-rename-note ()
   "Rename current note and replace title in header.
@@ -634,40 +682,26 @@ title."
   (interactive)
   (read-only-mode -1)
   (let* ((id (zk--current-id))
-         (file-title (zk--parse-id 'title id))
-         (header-title (progn
-                         (save-excursion
-                           (goto-char (point-min))
-                           (re-search-forward (concat id "."))
-                           (buffer-substring-no-properties
-                            (point)
-                            (line-end-position)))))
-         (new-title))
-    (if (not (string= file-title header-title))
-        (if (y-or-n-p (format "Change from \"%s\" to \"%s\"? " file-title header-title))
-            (setq new-title header-title)
-          (setq new-title (read-string "New title: " file-title)))
-      (setq new-title (read-string "New title: " file-title)))
-    (when (string-match "\n" new-title)
-      (setq new-title (replace-regexp-in-string "\n" "" new-title)))
-    (save-excursion
-      (goto-char (point-min))
-      (re-search-forward id)
-      (re-search-forward " ")
-      (delete-region (point) (line-end-position))
-      (insert new-title))
-    (let ((new-file (concat
-                     zk-directory "/"
-                     id
-                     zk-file-name-separator
-                     (replace-regexp-in-string
-                      " "
-                      zk-file-name-separator
-                      new-title)
-                     "." zk-file-extension)))
-      (rename-file buffer-file-name new-file t)
-      (set-visited-file-name new-file t t)
-      (save-buffer))))
+         (file-title (zk-parse-file-name 'title buffer-file-name))
+         (header-title (zk-parse-file-header 'title buffer-file-name))
+         (new-title
+          (string-trim                  ;  trim [ \t\n\r]+ on both ends
+           (if (and file-title
+                    (not (string= file-title header-title))
+                    (y-or-n-p
+                     (format "Change title in filename from \"%s\" to \"%s\"? "
+                             file-title header-title)))
+               header-title
+             (read-string "New title: " (or file-title header-title))))))
+    (funcall zk-update-note-header-function new-title id)
+    ;; If the file name /does/ contain a title, do rename the file
+    ;; with the new title even if `zk-file-name-id-only' is non-nil.
+    (when (or file-title
+              (not zk-file-name-id-only))
+      (let ((new-file (funcall zk-new-file-path-function id new-title)))
+        (rename-file buffer-file-name new-file t)
+        (set-visited-file-name new-file t t)))
+    (save-buffer)))
 
 ;;; Find File
 
@@ -799,22 +833,13 @@ FILES must be a list of filepaths. If nil, all files in
          (list (or files
                    (zk--directory-files)))
          (output))
-    (dolist (file list)
-      (progn
-        (string-match (concat "\\(?1:"
-                              zk-id-regexp
-                              "\\).\\(?2:.*?\\)\\."
-                              zk-file-extension
-                              ".*")
-                      file)
-        (let ((id (match-string 1 file))
-              (title (replace-regexp-in-string zk-file-name-separator " "
-                                               (match-string 2 file))))
-          (when id
-            (push (format-spec format
-                               `((?i . ,id)(?t . ,title)))
-                  output)))))
-    output))
+    (dolist (file list output)
+      (let ((id (zk--parse-file 'id file))
+            (title (zk--parse-file 'id file)))
+        (when id
+          (push (format-spec format
+                             `((?i . ,id) (?t . ,title)))
+                output))))))
 
 (defun zk-completion-at-point ()
   "Completion-at-point function for zk-links.
@@ -861,8 +886,6 @@ brackets \"[[\" initiates completion."
                                  `((?i . ,id)(?t . ,title))))
           (message "Link and title copied: %s" title))
       (error "No valid zk-id"))))
-
-
 
 ;;; List Backlinks
 
@@ -1013,14 +1036,7 @@ Backlinks and Links-in-Note are grouped separately."
 (defun zk--network-group-function (file transform)
   "Group FILE by type and TRANSFORM."
   (if transform
-      (progn
-        (string-match (concat "\\(?1:"
-                              zk-id-regexp
-                              "\\).\\(?2:.*?\\)\\."
-                              zk-file-extension
-                              ".*")
-                      file)
-        (match-string 2 file))
+      (zk--parse-file 'title file)
     (cond
      ((eq 'backlink (get-text-property 0 'type file)) "Backlinks")
      ((eq 'link (get-text-property 0 'type file)) "Links-in-Note"))))
