@@ -354,11 +354,10 @@ called in an internal loop."
     (member str all-ids)))
 
 (defun zk--current-id ()
-  "Return id of current note."
-  (unless (zk-file-p)
-    (user-error "Not a zk file"))
-  (string-match zk-id-regexp buffer-file-name)
-  (match-string 0 buffer-file-name))
+  "Return id of the zk note in the current buffer."
+  (if (zk-file-p buffer-file-name)
+      (match-string 0 buffer-file-name)
+    (user-error "Not a zk file")))
 
 (defun zk--directory-files (&optional full regexp)
   "Return list of zk-files in `zk-directory'.
