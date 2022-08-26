@@ -551,11 +551,11 @@ the file extension. This is the default value of
                                         ,target))))))
 
 (defun zk-parse-file-header (target file)
-  "Return TARGET, either `id or `title, from the given FILE.
-Unlike `zk-parse-file-name', attempt to get the note
-title from the file header."
-  (when (string-match zk-id-regexp file)
-    (let ((id (match-string 0 file)))
+  "Return TARGET, either 'id or 'title, from the given FILE.
+Unlike `zk-parse-file-name', attempt to get the note title
+from the file header."
+  (when (string-match (zk--file-name-regexp) file)
+    (let ((id (match-string 1 file)))
       (if (eql target 'id)
           id
         (when (file-exists-p file)
