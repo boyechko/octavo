@@ -306,7 +306,9 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   (let ((inhibit-message t)
         (inhibit-read-only t)
         (files (or files
-                   (zk--directory-files t)))
+                   (progn
+                     (setq zk-index--current-query-files nil)
+                     (zk--directory-files t))))
         (sort-fn (or sort-fn
                      (setq zk-index-last-sort-function nil)))
         (buf-name (or buf-name
@@ -437,11 +439,10 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   "Narrow index based on regexp search of note contents."
   (interactive)
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh
-       (zk-index-query-files)
-       zk-index-last-format-function
-       zk-index-last-sort-function
-       (buffer-name))
+      (zk-index-refresh (zk-index-query-files)
+                        zk-index-last-format-function
+                        zk-index-last-sort-function
+                        (buffer-name))
     (user-error "Not in a ZK-Index")))
 
 ;;;; Index Focus
@@ -452,11 +453,10 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   "Narrow index based on regexp search of note titles."
   (interactive)
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh
-       (zk-index-query-files)
-       zk-index-last-format-function
-       zk-index-last-sort-function
-       (buffer-name))
+      (zk-index-refresh (zk-index-query-files)
+                        zk-index-last-format-function
+                        zk-index-last-sort-function
+                        (buffer-name))
     (user-error "Not in a ZK-Index")))
 
 ;;;; Low-level Query Functions
@@ -466,6 +466,15 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
 Takes form of (COMMAND . TERM), where COMMAND is 'ZK-INDEX-FOCUS
 or 'ZK-INDEX-SEARCH, and TERM is the query string. Recent
 items listed first.")
+
+(defvar zk-index--current-query-files nil
+  "A list of files from the last successful `zk-index-focus' or
+`zk-index-search'.")
+
+(defun zk-index-refresh-current-query ()
+  "Refresh the ZK-Index buffer with the current subset of files."
+  (interactive)
+  (zk-index-refresh zk-index--current-query-files))
 
 (defun zk-index-query-files ()
   "Return narrowed list of notes, based on focus or search query."
@@ -489,6 +498,7 @@ items listed first.")
          (files (zk--parse-id 'file-path (remq nil ids))))
     (add-to-history 'zk-search-history string)
     (when files
+      (setq zk-index--current-query-files files)
       (let ((mode-line (zk-index-query-mode-line command string)))
         (setq zk-index-query-mode-line mode-line)
         (zk-index--set-mode-line mode-line)
@@ -669,10 +679,9 @@ with query term STRING."
 (defun zk-index-current-notes ()
   "Open ZK-Index listing currently open notes."
   (interactive)
-  (zk-index
-   (zk--current-notes-list)
-   zk-index-last-format-function
-   zk-index-last-sort-function))
+  (zk-index (zk--current-notes-list)
+            zk-index-last-format-function
+            zk-index-last-sort-function))
 
 (defun zk-index--button-at-point-p (&optional pos)
   "Return zk-id when `zk-index' button is at point.
