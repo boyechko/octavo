@@ -519,26 +519,38 @@ On each file, call `zk-parse-file-function' and collect the results."
         (car result)
       result)))
 
+;; This needs to be a macro (or function) in order to evaluate `zk-id-regexp' at
+;; run time in case the user has changed that.
+(defmacro zk--file-name-regexp (&optional with-extension)
+  "Returns the full regexp matching zk note file names.
+If WITH-EXTENSION is given, include the period and `zk-file-extension',
+otherwise just match the base name.
+
+Group 1 is the zk ID.
+Group 2 is the title."
+  (concat "\\(?1:" zk-id-regexp "\\)"
+          (unless zk-file-name-id-only
+            (concat zk-file-name-separator
+                    "\\(?2:[^.]*?\\)"))
+          (when with-extension
+            (concat "\\." zk-file-extension))))
+
 (defun zk-parse-file-name (target file)
   "Return TARGET, either `id or `title, from the given FILE.
 A note's title is understood to be the portion of its filename
 following the zk ID, in the format `zk-id-regexp', and preceding
 the file extension. This is the default value of
 `zk-parse-file-function'."
-  (when (string-match (concat "\\(?1:" zk-id-regexp "\\)"
-                              zk-file-name-separator
-                              (if zk-file-name-id-only
-                                  "*"   ; i.e. separator is optional
-                                "")
-                              "\\(?2:.*?\\)\\."
-                              zk-file-extension)
-                      file)
+  (when (string-match (zk--file-name-regexp) file)
     (pcase target
       ('id    (match-string 1 file))
       ('title (unless (string-empty-p (match-string 2 file))
-                (replace-regexp-in-string zk-file-name-separator
-                                          " "
-                                          (match-string 2 file)))))))
+                (string-replace zk-file-name-separator
+                                " "
+                                (match-string 2 file))))
+      (_ (signal 'wrong-type-argument `((and symbolp
+                                             (or id title))
+                                        ,target))))))
 
 (defun zk-parse-file-header (target file)
   "Return TARGET, either `id or `title, from the given FILE.
