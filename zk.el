@@ -295,18 +295,17 @@ Adds zk-id as an Embark target, and adds `zk-id-map' and
 
 (defun zk-file-p (&optional file strict)
   "Return t if FILE is a zk-file.
-If FILE is not given, get it from variable `buffer-file-name'. If
-STRICT is non-nil, make sure the file is in `zk-directory',
-otherwise just match against `zk-id-regexp'."
+If FILE is not given, get it from variable `buffer-file-name'.
+If STRICT is non-nil, make sure the file is in `zk-directory',
+otherwise just match against `zk-id-regexp'. Modifies match
+data."
   (let ((file (cond ((stringp file) file)
                     ((null file) buffer-file-name)
                     ((listp file) (car file))
                     (t
                      (signal 'wrong-type-argument '(file))))))
     (and file
-         (file-exists-p file)
-         (string-match-p zk-file-extension (file-name-extension file))
-         (string-match-p zk-id-regexp file)
+         (string-match (zk--file-name-regexp t) file)
          (or (not strict)
              (file-in-directory-p file zk-directory)))))
 
