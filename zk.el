@@ -125,10 +125,6 @@ title."
 Must take two arguments TARGET (either `id or `title) and FILE."
   :type 'function)
 
-(defcustom zk-new-file-path-function #'zk-new-file-path
-  "Given a zk ID and TITLE, return a full file path."
-  :type 'function)
-
 (defcustom zk-enable-link-buttons t
   "When non-nil, valid zk-id links will be clickable buttons.
 Allows `zk-make-link-buttons' to be added to `find-file-hook', so
@@ -326,7 +322,7 @@ The ID is created using `zk-id-time-string-format'."
       (setq id (number-to-string id)))
     id))
 
-(defun zk-new-file-path (id title)
+(defun zk--new-file-path (id title)
   "Generate file-path for new note.
 Takes an ID and TITLE and returns a full file path, based on values of
 `zk-directory', `zk-directory-subdir-function', `zk-file-name-separator', and
@@ -652,10 +648,7 @@ Optional TITLE argument."
                    (buffer-substring
                     (point)
                     (point-max)))))
-         (file-name (funcall zk-new-file-path-function
-                             new-id
-                             (when (not zk-file-name-id-only)
-                               title))))
+         (file-name (zk--new-file-path new-id title)))
     (unless orig-id
       (setq orig-id zk-default-backlink))
     (when (use-region-p)
@@ -722,7 +715,7 @@ title."
     ;; with the new title even if `zk-file-name-id-only' is non-nil.
     (when (or file-title
               (not zk-file-name-id-only))
-      (let ((new-file (funcall zk-new-file-path-function id new-title)))
+      (let ((new-file (zk--new-file-path id new-title)))
         (rename-file buffer-file-name new-file t)
         (set-visited-file-name new-file t t)))
     (save-buffer)))
