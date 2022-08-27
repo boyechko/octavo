@@ -265,28 +265,23 @@ will be used by default."
   (setq zk-index-last-sort-function sort-fn)
   (let ((inhibit-message nil)
         (inhibit-read-only t)
-        (buf-name (or buf-name
-                      zk-index-buffer-name))
-        (list (or files
-                  (zk--directory-files t))))
-    (if (not (get-buffer buf-name))
-        (progn
-          (when zk-default-backlink
-            (unless (zk-file-p)
-              (zk-find-file-by-id zk-default-backlink)))
-          (generate-new-buffer buf-name)
-          (with-current-buffer buf-name
-            (setq default-directory (expand-file-name zk-directory))
-            (zk-index-mode)
-            (zk-index--sort list format-fn sort-fn)
-            (setq truncate-lines t)
-            (goto-char (point-min)))
-          (pop-to-buffer buf-name
-                         '(display-buffer-at-bottom)))
+        (buf-name (or buf-name zk-index-buffer-name))
+        (files (or files (zk--directory-files t))))
+    (unless (get-buffer buf-name)
+      (when zk-default-backlink
+        (unless (zk-file-p)
+          (zk-find-file-by-id zk-default-backlink)))
+      (generate-new-buffer buf-name))
+    (with-current-buffer buf-name
+      (setq default-directory (expand-file-name zk-directory)
+            truncate-lines t)
+      (zk-index-mode)
       (when files
         (zk-index-refresh files format-fn sort-fn buf-name))
-      (pop-to-buffer buf-name
-                     '(display-buffer-at-bottom)))))
+      (goto-char (point-min)))
+    (pop-to-buffer buf-name
+                   '(display-buffer-at-bottom))))
+
 
 (defun zk-index-refresh (&optional files format-fn sort-fn buf-name)
   "Refresh the index.
@@ -294,80 +289,85 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   (interactive)
   (let ((inhibit-message t)
         (inhibit-read-only t)
-        (files (or files
-                   (progn
-                     (setq zk-index--current-query-files nil)
-                     (zk--directory-files t))))
-        (sort-fn (or sort-fn
-                     (setq zk-index-last-sort-function nil)))
-        (buf-name (or buf-name
-                      zk-index-buffer-name))
-        (line))
-    (with-current-buffer buf-name
-      (setq line (line-number-at-pos))
-      (erase-buffer)
-      (zk-index--reset-mode-name)
-      (zk-index--sort files format-fn sort-fn)
-      (goto-char (point-min))
-      (setq truncate-lines t)
-      (unless (zk-index-narrowed-p buf-name)
-        (progn
+        (files (zk-index--sort (or files (zk--directory-files)) sort-fn)))
+    (with-current-buffer (or buf-name zk-index-buffer-name)
+      (let ((current-line (line-number-at-pos))
+            (n 0))
+        (unless sort-fn
+          (setq zk-index-last-sort-function nil))
+        (erase-buffer)
+        (dolist (file files)
+          (zk-index--insert-button file format-fn)
+          (setq n (1+ n))
+          (insert "\n"))
+        ;; Delete the extraneous newline at the end of the buffer.
+        (backward-delete-char 1)
+        (zk-index--reset-mode-name)
+        (zk-index--set-mode-name (format " [%s]" n))
+        (goto-char (point-min))
+        (setq truncate-lines t)
+        (unless (zk-index-narrowed-p buf-name)
           (zk-index--reset-mode-line)
-          (forward-line line))))))
+          (forward-line current-line))))))
 
-(defun zk-index--sort (files &optional format-fn sort-fn)
-  "Sort FILES, with option FORMAT-FN and SORT-FN."
-  (let* ((sort-fn (or sort-fn
-                      'zk-index--sort-modified))
-         (files (if (eq 1 (length files))
-                    files
-                  (nreverse (funcall sort-fn files)))))
-    (funcall #'zk-index--format files format-fn)))
-
-(defun zk-index--format (files &optional format-fn)
-  "Format FILES with optional custom FORMAT-FN."
-  (let* ((format-fn (or format-fn zk-index-format-function))
-         (candidates (funcall format-fn files)))
-    (zk-index--insert candidates)))
+(defun zk-index--sort (files &optional sort-fn)
+  "Sort FILES (destructively) with SORT-FN.
+If no SORT-FN is given, use `zk-index--sort-modified'."
+  (if (eq 1 (length files))
+      files
+    (nreverse (funcall (or sort-fn
+                           'zk-index--sort-modified)
+                       files))))
 
 (eval-and-compile
   (define-button-type 'zk-index
     'follow-link t
     'face 'default))
 
-(defun zk-index--insert (candidates)
-  "Insert CANDIDATES into ZK-Index."
-  (when (eq major-mode 'zk-index-mode)
-    (dolist (file candidates)
-      (insert (concat zk-index-prefix file "\n")))
-    (goto-char (point-min))
-    (zk-index-make-buttons)
-    (zk-index--set-mode-name (format " [%s]" (length candidates)))))
+(defmacro zk-index--make-button (begin end file id title)
+  "A macro that standardizes a call to `make-text-button'."
+  `(make-text-button ,begin ,end
+                     'type 'zk-index
+                     'zk-triplet (zk--triplet ,file ,id ,title)
+                     'action 'zk-index-button-action
+                     'help-echo 'zk-index-help-echo))
+
+(defun zk-index--insert-button (file &optional format-fn)
+  "Makes and inserts a button for the given FILE.
+If given, FORMAT-FN is used to format the line, otherwise
+`zk-index-format-function' is used. Returns a triplet of file, id, and
+title (like those used `zk--alist')."
+  (let ((beg (point))
+        (id (zk--parse-file 'id file))
+        (title (zk--parse-file 'title file)))
+    (insert zk-index-prefix
+            (funcall (or format-fn zk-index-format-function) id title))
+    (zk-index--make-button beg (point-at-eol) file id title)))
 
 ;;;###autoload
 (defun zk-index-make-buttons ()
   "Make buttons in ZK-Index."
   (interactive)
   (let ((inhibit-read-only t)
-        (ids (zk--id-list (zk--directory-files))))
+        (alist (zk--alist (zk--directory-files))))
     (save-excursion
       (goto-char (point-min))
       (while (re-search-forward zk-id-regexp nil t)
         (let* ((beg (line-beginning-position))
                (end (line-end-position))
-               (id (match-string-no-properties 1)))
-          (when (member id ids)
+               (id (match-string-no-properties 1))
+               (triplet (assoc-string id alist #'equal)))
+          (when triplet
             (beginning-of-line)
-            (make-text-button beg end
-                              'type 'zk-index
-                              'action 'zk-index-button-action
-                              'help-echo 'zk-index-help-echo)
+            (zk-index--make-button beg end
+                                   (zk--triplet-file triplet)
+                                   id
+                                   (zk--triplet-title triplet))
             (when zk-index-invisible-ids
               (beginning-of-line)
-              (re-search-forward id)
-              (replace-match
-               (propertize id 'invisible t)))
-              (goto-char (match-end 0))))))))
+              (when (re-search-forward id)
+                (replace-match (propertize id 'invisible t))
+                (goto-char (match-end 0))))))))))
 
 ;;;; Utilities
 
@@ -393,13 +393,14 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
                           (window-height . 0.6))))
       (find-file-other-window file))))
 
-(defun zk-index-button-action (_)
+(defun zk-index-button-action (button)
   "Action taken when `zk-index' button is pressed."
-  (let* ((id (zk-index--button-at-point))
-         (file (zk--parse-id 'file-path id))
-         (buffer
-          (find-file-noselect file)))
-    (funcall zk-index-button-display-function file buffer)))
+  (let ((file (zk--triplet-file (button-get button 'zk-triplet))))
+    (if file
+        (funcall zk-index-button-display-function
+                 file
+                 (find-file-noselect file))
+      (error "Don't know how to open this zk note"))))
 
 (defun zk-index-help-echo (win _obj pos)
   "Generate help-echo zk-index button in WIN at POS."
@@ -653,12 +654,14 @@ with query term STRING."
   "View note in `zk-index-view-mode'."
   (interactive)
   (beginning-of-line)
-  (let* ((id (zk-index--button-at-point))
-        (kill (unless (get-file-buffer (zk--parse-id 'file-path id))
-                t)))
-    (push-button nil t)
-    (setq-local zk-index-view--kill kill)
-    (zk-index-view-mode)))
+  (let ((file (zk--triplet-file
+               (button-get (button-at (point)) 'zk-triplet))))
+    (if (not file)
+        (error "Cannot view this note")
+      (with-current-buffer (get-file-buffer file)
+        (push-button nil t)
+        (setq-local zk-index-view--kill t)
+        (zk-index-view-mode)))))
 
 (defun zk-index-current-notes ()
   "Open ZK-Index listing currently open notes."
@@ -839,62 +842,56 @@ If `zk-index-auto-scroll' is non-nil, show note in other window."
           (while (re-search-forward zk-id-regexp nil t)
             (let* ((beg (line-beginning-position))
                    (end (line-end-position))
-                   (id  (progn
-                          (save-match-data
-                            (beginning-of-line)
-                            (when (re-search-forward "\\[\\[" end t)
-                              (replace-match ""))
-                            (when (re-search-forward "]]" end t)
-                              (replace-match "")))
-                          (match-string-no-properties 1)))
+                   (id  (match-string-no-properties 1))
                    (title (buffer-substring-no-properties beg (match-beginning 0)))
                    (new-title (when (member id ids)
                                 (concat zk-index-desktop-prefix
-                                        (zk--parse-id 'title id zk-alist) " "))))
+                                        (zk--parse-id 'title id alist) " ")))
+                   ;; (save-rest (prog1 (buffer-substring-no-properties
+                   ;;                    (match-end 0) end)
+                   ;;              (kill-region (match-end 0) end)))
+                   )
               (beginning-of-line)
-              (if new-title
-                  (unless (string= title new-title)
-                    (progn
-                      (search-forward title end)
-                      (replace-match new-title)))
-                (progn
-                  (search-forward title end)
-                  (replace-match (propertize title 'face 'error))))
+              (when (and (search-forward title end)
+                         (stringp new-title)
+                         (not (string= title new-title)))
+                (replace-match new-title))
               (end-of-line)))
-        ;; make buttons
-        (goto-char (point-min))
-        (while (re-search-forward zk-id-regexp nil t)
-          (let* ((beg (line-beginning-position))
-                 (end (line-end-position))
-                 (id (match-string-no-properties 1)))
-            (if (member id ids)
-                (progn
-                  (make-text-button beg end 'type 'zk-index-desktop)
-                  (when zk-index-invisible-ids
-                    (beginning-of-line)
-                    ;; find zk-links and plain zk-ids
-                    (if (re-search-forward zk-link-regexp (line-end-position) t)
-                        (replace-match
-                         (propertize (match-string 0) 'invisible t) nil t)
-                      (progn
-                        (re-search-forward id)
-                        (replace-match
-                          (propertize id
-                                      'read-only t
-                                      'front-sticky t
-                                      'rear-nonsticky t))
-                        ;; enable invisibility in org-mode
-                        (overlay-put
-                         (make-overlay (match-beginning 0) (match-end 0))
-                         'invisible t)
-                        )))
-                  (add-text-properties beg (+ beg 1)
-                                       '(front-sticky nil)))
-              (end-of-line)
-              (overlay-put (make-overlay (point) (point))
-                           'before-string
-                           (propertize" <- ID NOT FOUND" 'font-lock-face 'error))))
-          (end-of-line)))))))
+          ;; make buttons
+          (goto-char (point-min))
+          (while (re-search-forward zk-id-regexp nil t)
+            (let* ((beg (line-beginning-position))
+                   (end (line-end-position))
+                   (id (match-string-no-properties 1)))
+              (if (not (member id ids))
+                  (progn
+                    (end-of-line)
+                    (unless (overlays-at (point))
+                      (overlay-put (make-overlay (point) (point))
+                                 'before-string
+                                 (propertize" <- ID NOT FOUND" 'font-lock-face 'error))))
+                (make-text-button beg end 'type 'zk-index-desktop)
+                (when zk-index-invisible-ids
+                  (beginning-of-line)
+                  ;; find zk-links and plain zk-ids
+                  (if (re-search-forward (zk-link-regexp) (line-end-position) t)
+                      (replace-match
+                       (propertize (match-string 0) 'invisible t) nil t)
+                    (progn
+                      (re-search-forward id)
+                      (replace-match
+                       (propertize id
+                                   'read-only t
+                                   'front-sticky t
+                                   'rear-nonsticky t))
+                      ;; enable invisibility in org-mode
+                      (overlay-put
+                       (make-overlay (match-beginning 0) (match-end 0))
+                       'invisible t)
+                      )))
+                (add-text-properties beg (+ beg 1)
+                                     '(front-sticky nil))))
+            (end-of-line)))))))
 
 ;;;###autoload
 (defun zk-index-send-to-desktop (desktop &optional files)
