@@ -617,11 +617,9 @@ with query term STRING."
       (puthash x (zk--parse-file 'id x) ht))
     (sort list
           (lambda (a b)
-            (let ((one
-                   (gethash a ht))
-                  (two
-                   (gethash b ht)))
-              (string< two one))))))
+            (let ((id-a (gethash a ht))
+                  (id-b (gethash b ht)))
+              (string< id-b id-a))))))
 
 (defun zk-index--sort-modified (list)
   "Sort LIST for latest modification."
@@ -630,11 +628,9 @@ with query term STRING."
       (puthash x (file-attribute-modification-time (file-attributes x)) ht))
     (sort list
           (lambda (a b)
-            (let ((one
-                   (gethash a ht))
-                  (two
-                   (gethash b ht)))
-              (time-less-p two one))))))
+            (let ((time-a (gethash a ht))
+                  (time-b (gethash b ht)))
+              (time-less-p time-b time-a))))))
 
 (defun zk-index--sort-size (list)
   "Sort LIST for latest modification."
