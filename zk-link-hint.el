@@ -106,7 +106,7 @@ Only search the range between just after the point and BOUND."
 Set pop-up frame parameters in 'link-hint-preview-frame-parameters'."
     (interactive)
     (let* ((id (or (zk--id-at-point)
-                   (zk-index--button-at-point-p)))
+                   (zk-index--button-at-point)))
            (file (zk--parse-id 'file-path id))
            (buffer (get-file-buffer file))
            (frame (selected-frame)))
@@ -133,7 +133,7 @@ Set pop-up frame parameters in 'link-hint-preview-frame-parameters'."
   (let ((buffer (current-buffer))
         (frame (selected-frame))
         (new-buffer))
-    (if-let (id (zk-index--button-at-point-p))
+    (if-let (id (zk-index--button-at-point))
         (progn
           (if (get-file-buffer (zk--parse-id 'file-path id))
               (setq link-hint-preview--kill-last nil)

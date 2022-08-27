@@ -231,7 +231,7 @@ Adds zk-id as an Embark target, and adds `zk-id-map' and
 
 (defun zk-index-embark-target ()
   "Target zk-id of button at point in ZK-Index and ZK-Desktop."
-  (when (zk-index--button-at-point-p)
+  (when (zk-index--button-at-point)
     (save-excursion
       (beginning-of-line)
       (re-search-forward zk-id-regexp (line-end-position)))
@@ -407,7 +407,7 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
 
 (defun zk-index-button-action (_)
   "Action taken when `zk-index' button is pressed."
-  (let* ((id (zk-index--button-at-point-p))
+  (let* ((id (zk-index--button-at-point))
          (file (zk--parse-id 'file-path id))
          (buffer
           (find-file-noselect file)))
@@ -663,13 +663,14 @@ with query term STRING."
   (beginning-of-line)
   (push-button nil t))
 
+;; TODO: What is this variable for?
 (defvar-local zk-index-view--kill nil)
 
 (defun zk-index-view-note ()
   "View note in `zk-index-view-mode'."
   (interactive)
   (beginning-of-line)
-  (let* ((id (zk-index--button-at-point-p))
+  (let* ((id (zk-index--button-at-point))
         (kill (unless (get-file-buffer (zk--parse-id 'file-path id))
                 t)))
     (push-button nil t)
@@ -683,7 +684,7 @@ with query term STRING."
             zk-index-last-format-function
             zk-index-last-sort-function))
 
-(defun zk-index--button-at-point-p (&optional pos)
+(defun zk-index--button-at-point (&optional pos)
   "Return zk-id when `zk-index' button is at point.
 Takes an option POS position argument."
   (let ((button (or pos
@@ -699,7 +700,7 @@ Takes an option POS position argument."
   "Insert zk-link in `other-window' for button ID at point."
   (interactive)
   (let ((id (or id
-                (zk-index--button-at-point-p))))
+                (zk-index--button-at-point))))
     (with-selected-window (other-window-for-scrolling)
       (zk-insert-link id)
       (newline))))
@@ -980,8 +981,8 @@ at point."
         (toggle-truncate-lines))
       (zk-index-desktop-mode))
     (if (eq major-mode 'zk-index-mode)
-        (message "Sent to %s - press D to switch" buffer)
-      (message "Sent to %s" buffer))))
+        (message "Sent to %s - press D to switch" desktop)
+      (message "Sent to %s" desktop))))
 
 (defun zk-index-desktop-add-toggle ()
   "Set `zk-index-desktop-add-pos' interactively."
@@ -1044,28 +1045,28 @@ With prefix-argument, raise ZK-Desktop in other frame."
 (defun zk-index-desktop-delete-region-maybe ()
   "Maybe delete region in `zk-index-desktop-mode'."
   (cond ((and (not (use-region-p))
-              (zk-index--button-at-point-p))
+              (zk-index--button-at-point))
          (delete-region (line-beginning-position)
                         (line-end-position)))
         ((and (use-region-p)
-              (zk-index--button-at-point-p (region-beginning))
-              (not (zk-index--button-at-point-p (region-end))))
+              (zk-index--button-at-point (region-beginning))
+              (not (zk-index--button-at-point (region-end))))
          (delete-region (save-excursion
                           (goto-char (region-beginning))
                           (line-beginning-position))
                         (region-end))
          t)
         ((and (use-region-p)
-              (not (zk-index--button-at-point-p (region-beginning)))
-              (zk-index--button-at-point-p (region-end)))
+              (not (zk-index--button-at-point (region-beginning)))
+              (zk-index--button-at-point (region-end)))
          (delete-region (region-beginning)
                         (save-excursion
                           (goto-char (region-end))
                           (line-end-position)))
          t)
         ((and (use-region-p)
-              (zk-index--button-at-point-p (region-beginning))
-              (zk-index--button-at-point-p (region-end)))
+              (zk-index--button-at-point (region-beginning))
+              (zk-index--button-at-point (region-end)))
          (delete-region
           (save-excursion
             (goto-char (region-beginning))
@@ -1087,7 +1088,7 @@ With prefix-argument, raise ZK-Desktop in other frame."
                     (looking-at "$"))
                (save-excursion
                  (beginning-of-line)
-                 (zk-index--button-at-point-p)))
+                 (zk-index--button-at-point)))
     (let ((inhibit-read-only t))
       (unless (zk-index-desktop-delete-region-maybe)
         (funcall #'delete-char (or current-prefix-arg 1))))))
@@ -1099,7 +1100,7 @@ With prefix-argument, raise ZK-Desktop in other frame."
                              (line-beginning-position))
                (save-excursion
                  (beginning-of-line)
-                 (zk-index--button-at-point-p)))
+                 (zk-index--button-at-point)))
     (let ((inhibit-read-only t))
       (unless (zk-index-desktop-delete-region-maybe)
         (funcall #'delete-char (or current-prefix-arg -1))))))
@@ -1108,7 +1109,7 @@ With prefix-argument, raise ZK-Desktop in other frame."
   "Kill line in `zk-index-desktop-mode'."
   (interactive)
   (let ((inhibit-read-only t))
-    (if (not (zk-index--button-at-point-p))
+    (if (not (zk-index--button-at-point))
         (kill-line)
       (kill-region (line-beginning-position)
                    (line-end-position)))))
@@ -1118,22 +1119,22 @@ With prefix-argument, raise ZK-Desktop in other frame."
   (interactive)
   (let ((inhibit-read-only t))
     (cond ((and (use-region-p)
-                (zk-index--button-at-point-p (region-beginning))
-                (not (zk-index--button-at-point-p (region-end))))
+                (zk-index--button-at-point (region-beginning))
+                (not (zk-index--button-at-point (region-end))))
            (kill-region (save-excursion
                             (goto-char (region-beginning))
                             (line-beginning-position))
                           (region-end)))
           ((and (use-region-p)
-                (not (zk-index--button-at-point-p (region-beginning)))
-                (zk-index--button-at-point-p (region-end)))
+                (not (zk-index--button-at-point (region-beginning)))
+                (zk-index--button-at-point (region-end)))
            (kill-region (region-beginning)
                           (save-excursion
                             (goto-char (region-end))
                             (line-end-position))))
           ((and (use-region-p)
-                (zk-index--button-at-point-p (region-beginning))
-                (zk-index--button-at-point-p (region-end)))
+                (zk-index--button-at-point (region-beginning))
+                (zk-index--button-at-point (region-end)))
            (kill-region
             (save-excursion
               (goto-char (region-beginning))
