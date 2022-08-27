@@ -406,8 +406,8 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   (with-selected-window win
     (let ((id (save-excursion
                 (goto-char pos)
-                (re-search-forward zk-id-regexp (line-end-position) t)
-                (match-string-no-properties 0))))
+                (when (re-search-forward zk-id-regexp (line-end-position) t)
+                  (match-string-no-properties 0)))))
       (format "%s" (zk--parse-id 'title id)))))
 
 (defun zk-index-narrowed-p (buf-name)
