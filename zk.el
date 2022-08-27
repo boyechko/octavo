@@ -359,8 +359,7 @@ called in an internal loop."
 
 (defun zk--id-unavailable-p (str)
   "Return t if provided string STR is already in use as an id."
-  (let ((all-ids (zk--id-list)))
-    (member str all-ids)))
+  (file-exists-p (zk--parse-id 'file-path str nil)))
 
 (defun zk--current-id ()
   "Return id of the zk note in the current buffer."
