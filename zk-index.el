@@ -349,7 +349,7 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   "Make buttons in ZK-Index."
   (interactive)
   (let ((inhibit-read-only t)
-        (ids (zk--id-list)))
+        (ids (zk--id-list (zk--directory-files))))
     (save-excursion
       (goto-char (point-min))
       (while (re-search-forward zk-id-regexp nil t)
@@ -415,7 +415,7 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   (with-current-buffer (or buf-name
                            zk-index-buffer-name)
     (if (< (count-lines (point-min) (point-max))
-           (length (zk--id-list)))
+           (length (zk--id-list (zk--directory-files))))
         t nil)))
 
 ;;; Index Search and Focus Functions
@@ -467,10 +467,11 @@ items listed first.")
 (defun zk-index-query-files ()
   "Return narrowed list of notes, based on focus or search query."
   (let* ((command this-command)
+         (files (zk--directory-files))
          (scope (if (zk-index-narrowed-p (buffer-name))
                     (zk-index--current-id-list (buffer-name))
                   (setq zk-index-query-terms nil)
-                  (zk--id-list)))
+                  (zk--id-list files)))
          (string (read-string (cond ((eq command 'zk-index-focus)
                                      "Focus: ")
                                     ((eq command 'zk-index-search)
@@ -478,7 +479,7 @@ items listed first.")
                               nil 'zk-search-history))
          (query (cond
                  ((eq command 'zk-index-focus)
-                  (zk--id-list string))
+                  (zk--id-list files string))
                  ((eq command 'zk-index-search)
                   (zk--grep-id-list string))))
          (ids (mapcar (lambda (x) (when (member x scope) x))
@@ -833,8 +834,9 @@ If `zk-index-auto-scroll' is non-nil, show note in other window."
       (save-excursion
         ;; replace titles
         (goto-char (point-min))
-        (let ((ids (zk--id-list))
-              (zk-alist (zk--alist)))
+        (let* ((files (zk--directory-files))
+               (ids (zk--id-list files))
+               (alist (zk--alist files)))
           (while (re-search-forward zk-id-regexp nil t)
             (let* ((beg (line-beginning-position))
                    (end (line-end-position))

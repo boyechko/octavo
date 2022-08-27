@@ -342,20 +342,16 @@ ID only."
      (expand-file-name (funcall zk-directory-subdir-function id)
                        zk-directory))))
 
-(defun zk--id-list (&optional str zk-alist)
-  "Return a list of zk IDs for notes in `zk-directory'.
-Optional search for regexp STR in note title, case-insenstive.
-Takes an optional ZK-ALIST, for efficiency if `zk--id-list' is
-called in an internal loop."
-  (let ((zk-alist (or zk-alist (zk--alist)))
-        (case-fold-search t)
-        (ids))
-    (dolist (item zk-alist)
-      (if str
-          (when (string-match str (cadr item))
-            (push (car item) ids))
-        (push (car item) ids)))
-    ids))
+(defun zk--id-list (files &optional str)
+  "Return a list of zk IDs for notes in FILES.
+Optional search for regexp STR in file name, case-insenstive."
+  (let ((case-fold-search t)
+        ids)
+    (dolist (file files ids)
+      (when (and (string-match (zk--file-name-regexp t) file)
+                 (or (not str)
+                     (and str (match-string 2 file))))
+        (push (match-string 1 file) ids)))))
 
 (defun zk--id-unavailable-p (str)
   "Return t if provided string STR is already in use as an id."
@@ -878,10 +874,10 @@ brackets \"[[\" initiates completion."
 (defun zk-copy-link-and-title (&optional arg)
   "Copy link and title for id or file ARG at point."
   (interactive (list (funcall zk-select-file-function "Copy link: ")))
-  (let* ((zk-id-list (zk--id-list))
-         (id (cond ((member arg zk-id-list)
+  (let* ((id-list (zk--id-list (zk--directory-files)))
+         (id (cond ((member arg id-list)
                     arg)
-                   ((member (car arg) zk-id-list)
+                   ((member (car arg) id-list)
                     (car arg))
                    ((zk-file-p arg)
                     (zk--parse-file 'id arg))
@@ -968,7 +964,7 @@ Select TAG, with completion, from list of all tags in zk notes."
 (defun zk--dead-link-id-list ()
   "Return list of all links with no corresponding note."
   (let* ((all-link-ids (zk--grep-link-id-list))
-         (all-ids (zk--id-list)))
+         (all-ids (zk--id-list (zk--directory-files))))
     (delete-dups (remq nil (mapcar
                             (lambda (x)
                               (string-match zk-id-regexp x)
@@ -991,7 +987,7 @@ Select TAG, with completion, from list of all tags in zk notes."
 (defun zk--unlinked-notes-list ()
   "Return list of IDs for notes that no notes link to."
   (let* ((all-link-ids (zk--grep-link-id-list))
-         (all-ids (zk--id-list)))
+         (all-ids (zk--id-list (zk--directory-files))))
     (remq nil (mapcar
                (lambda (x)
                  (when (not (member x all-link-ids))
