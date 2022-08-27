@@ -898,16 +898,20 @@ If `zk-index-auto-scroll' is non-nil, show note in other window."
           (end-of-line)))))))
 
 ;;;###autoload
-(defun zk-index-send-to-desktop (&optional files)
+(defun zk-index-send-to-desktop (desktop &optional files)
   "Send notes from ZK-Index to ZK-Desktop.
 In ZK-Index, works on note at point or notes in active region.
 Also works on FILES or group of files in minibuffer, and on zk-id
-at point."
-  (interactive)
+at point. With prefix argument, asks user to select the desktop
+even if `zk-index-desktop-current' is set."
+  (interactive (list (if (or current-prefix-arg
+                             (null zk-index-desktop-current))
+                         (zk-index-desktop-select)
+                       zk-index-desktop-current)))
   (unless zk-index-desktop-directory
     (error "Please set 'zk-index-desktop-directory'"))
   (let ((inhibit-read-only t)
-        (buffer) (items))
+        items)
     (cond ((eq 1 (length files))
            (unless
                (ignore-errors
@@ -941,13 +945,9 @@ at point."
                   (funcall
                    zk-index-format-function
                    (list (zk--parse-id 'file-path (zk--current-id))))))))
-    (if (and zk-index-desktop-current
-             (buffer-live-p (get-buffer zk-index-desktop-current)))
-        (setq buffer zk-index-desktop-current)
-      (setq buffer (zk-index-desktop-select)))
-    (unless (get-buffer buffer)
-      (generate-new-buffer buffer))
-    (with-current-buffer buffer
+    (unless (get-buffer desktop)
+      (generate-new-buffer desktop))
+    (with-current-buffer desktop
       (setq require-final-newline 'visit-save)
       (pcase zk-index-desktop-add-pos
         ('append (progn
