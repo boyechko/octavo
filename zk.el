@@ -822,7 +822,7 @@ for additional configurations."
 (defun zk--insert-link-and-title (id title)
   "Insert zk ID and TITLE according to `zk-link-and-title-format'."
   (insert (format-spec zk-link-and-title-format
-                       `((?i . ,id)(?t . ,title))))
+                       `((?i . ,id) (?t . ,title))))
   (when zk-enable-link-buttons
     (zk-make-button-before-point)))
 
