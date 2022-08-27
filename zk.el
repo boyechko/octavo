@@ -149,6 +149,23 @@ Set it so that it matches strings generated with
   "The regular expression used to search for tags."
   :type 'regexp)
 
+;; FIXME: This is a hack, since just treats the ID as anything after # and not
+;; containing spaces.
+(defmacro zk-header-title-line-regexp ()
+  "^# \\(?1:[^ ]+\\) \\(?2:.*\\)$"
+  "Regexp of the zk file's first header line, which contains the note ID and
+title, and is followed by the YAML-style header block.
+
+Group 1 is the ID.
+Group 2 is the title."
+  :type 'regexp)
+
+(defcustom zk-header-line-regexp "^\\(?1:[[:alpha:]]+\\): \\(?2:.*\\)$"
+  "Regexp of a YAML-style header line.
+Group 1 is the key
+Group 2 is the value."
+  :type 'regexp)
+
 (defcustom zk-new-note-header-function #'zk-new-note-header
   "Function called by `zk-new-note' to insert header in a new note.
 A user-defined function should use `insert' to insert a string or
@@ -587,6 +604,17 @@ the file extension. This is the default value of
                                              (or id title))
                                         ,target))))))
 
+(defun zk--file-header (file)
+  "Return an list of (key . value) pairs comprising the FILE's header as
+defined by `zk-header-line-regexp'."
+  (let (alist)
+    (with-temp-buffer
+      (insert-file-contents file)
+      (while (re-search-forward zk-header-line-regexp nil t)
+        (push (cons (match-string-no-properties 1) (match-string-no-properties 2))
+              alist)))
+    alist))
+
 (defun zk-parse-file-header (target file)
   "Return TARGET, either 'id or 'title, from the given FILE.
 Unlike `zk-parse-file-name', attempt to get the note title
@@ -595,15 +623,12 @@ from the file header."
     (let ((id (match-string 1 file)))
       (if (eql target 'id)
           id
-        (when (file-exists-p file)
+        (ignore-errors
           (with-temp-buffer
             (insert-file-contents file)
             (goto-char (point-min))
-            (when (re-search-forward
-                   (concat id (regexp-quote zk-file-name-separator))
-                   nil t)
-              (buffer-substring-no-properties
-               (match-end 0) (line-end-position)))))))))
+            (when (re-search-forward zk-header-title-regexp nil t)
+              (match-string-no-properties 1))))))))
 
 ;;; Buttons
 
