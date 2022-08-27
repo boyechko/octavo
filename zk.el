@@ -313,6 +313,24 @@ data."
          (or (not strict)
              (file-in-directory-p file zk-directory)))))
 
+(defmacro zk--triplet (file id title)
+  "Returns a triplet suitable as element of `zk--alist', with the order
+appropriate for the `zk--triplet-file', `zk--triplet-id', and
+`zk--triplet-title' accessors."
+  `(list ,id ,title ,file))
+
+(defmacro zk--triplet-id (triplet)
+  "Return the id from the given TRIPLET from `zk-alist'."
+  `(elt ,triplet 0))
+
+(defmacro zk--triplet-title (triplet)
+  "Return the title from the given TRIPLET from `zk-alist'."
+  `(elt ,triplet 1))
+
+(defmacro zk--triplet-file (triplet)
+  "Return the file path from the given TRIPLET from `zk-alist'."
+  `(elt ,triplet 2))
+
 (defun zk--generate-id ()
   "Generate and return a zk ID.
 The ID is created using `zk-id-time-string-format'."
@@ -464,14 +482,15 @@ supplied. Can take a PROMPT argument."
         ((thing-at-point-looking-at (zk-link-regexp))
          (match-string-no-properties 1))))
 
-(defun zk--alist ()
-  "Return an alist ID, title, and file-path triples."
+(defun zk--alist (files)
+  "Return an alist ID, title, and file-path triplets for the given
+FILES."
   (mapcar (lambda (file)
             (when (zk-file-p file)
-              (list (zk--parse-file 'id file)
-                    (zk--parse-file 'title file)
-                    file)))
-          (zk--directory-files t)))
+              (zk--triplet file
+                           (zk--parse-file 'id file)
+                           (zk--parse-file 'title file))))
+          files))
 
 (defun zk--parse-id (target id &optional zk-alist)
   "Return TARGET, either 'file-path or 'title, for the given ID. If
@@ -832,12 +851,11 @@ FILES must be a list of filepaths. If nil, all files in
 `zk-directory' will be returned as formatted candidates."
   (let* ((format (or format
                      zk-completion-at-point-format))
-         (list (or files
-                   (zk--directory-files)))
-         (output))
-    (dolist (file list output)
-      (let ((id (zk--parse-file 'id file))
-            (title (zk--parse-file 'id file)))
+         (alist (zk--alist (or files (zk--directory-files))))
+         output)
+    (dolist (triplet alist output)
+      (let ((id (zk--triplet-id triplet))
+            (title (zk--triplet-title triplet)))
         (when id
           (push (format-spec format
                              `((?i . ,id) (?t . ,title)))
