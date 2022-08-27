@@ -382,8 +382,7 @@ file-paths."
          (list
           (if (not zk-directory-recursive)
               (directory-files zk-directory full regexp)
-            (directory-files-recursively
-             zk-directory regexp nil
+            (directory-files-recursively zk-directory regexp nil
              (lambda (dir)
                (not (string-match
                      zk-directory-recursive-ignore-dir-regexp
