@@ -53,8 +53,8 @@
   "Name for ZK-Index buffer."
   :type 'string)
 
-(defcustom zk-index-format-function 'zk-index--format-candidates
-  "Default formatting function for ZK-Index candidates."
+(defcustom zk-index-format-function 'zk-index--format-line
+  "Default formatting function for listing notes in ZK-Index."
   :type 'function)
 
 (defcustom zk-index-invisible-ids t
@@ -240,31 +240,20 @@ Adds zk-id as an Embark target, and adds `zk-id-map' and
 
 ;;; Formatting
 
-(defun zk-index--format-candidates (&optional files format)
-  "Return a list of FILES as formatted candidates, following FORMAT.
+(defun zk-index--format-line (id title &optional format)
+  "Return a formatted string, following FORMAT, for the given ID and TITLE.
 
-FORMAT must be a `format-spec' template, wherein `%i' is replaced
-by the ID and `%t' by the title. It can be a string, such as \"%t
-[[%i]]\", or a variable whose value is a string. If nil,
-`zk-completion-at-point-format' will be used by default.
-
-FILES must be a list of filepaths. If nil, all files in
-`zk-directory' will be returned as formatted candidates."
-  (let* ((zk-index-format (if zk-index-invisible-ids
-                              "%t %i"
-                            zk-index-format))
-         (format (or format zk-index-format))
-         (list (or files (zk--directory-files)))
-         (output))
-    (dolist (file list output)
-      (let ((id (if zk-index-invisible-ids
-                    (propertize (zk--parse-file 'id file) 'invisible t)
-                  (zk--parse-file 'id file)))
-            (title (zk--parse-file 'title file)))
-        (when id
-          (push (format-spec format
-                             `((?i . ,id) (?t . ,title)))
-                output))))))
+FORMAT must be a `format-spec' template, wherein `%i' is replaced by the ID
+and `%t' by the title. It can be a string, such as \"%t [[%i]]\", or a
+variable whose value is a string. If nil, `zk-completion-at-point-format'
+will be used by default."
+  (let ((format (or format (if zk-index-invisible-ids
+                                "%t %i"
+                              zk-index-format)))
+        (id (if zk-index-invisible-ids
+                (propertize id 'invisible t)
+              id)))
+    (format-spec format `((?i . ,id) (?t . ,title)))))
 
 ;;; Main Stack
 
@@ -337,8 +326,7 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
 
 (defun zk-index--format (files &optional format-fn)
   "Format FILES with optional custom FORMAT-FN."
-  (let* ((format-fn (or format-fn
-                        zk-index-format-function))
+  (let* ((format-fn (or format-fn zk-index-format-function))
          (candidates (funcall format-fn files)))
     (zk-index--insert candidates)))
 
