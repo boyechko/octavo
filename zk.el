@@ -84,13 +84,21 @@
 
 ;; Borrowed from Deft by Jason R. Blevins <jblevins@xbeta.org>
 (defcustom zk-directory-recursive nil
-  "Recursively search for files in subdirectories of `zk-directory'."
+  "Recursively search for files in subdirectories of `zk-directory'.
+If you set this, also consider setting `zk-directory-subdir-function' to an
+appropriate function for creating new zk files."
   :type 'boolean)
 
 (defcustom zk-directory-recursive-ignore-dir-regexp
   "\\(?:\\.\\|\\.\\.\\)$"
   "Regexp for subdirs to be ignored when ‘zk-directory-recursive’ is non-nil."
   :type 'string)
+
+(defcustom zk-directory-subdir-function (lambda (_) "")
+  "A function that given a zk ID, returns a subdirectory of `zk-directory'
+where the note should be stored. The default is to save all zk files directly
+in `zk-directory'."
+  :type 'function)
 
 (defcustom zk-file-extension nil
   "The extension for zk files."
@@ -320,18 +328,23 @@ The ID is created using `zk-id-time-string-format'."
 
 (defun zk-new-file-path (id title)
   "Generate file-path for new note.
-Takes an ID and TITLE and returns a full file path, based on
-values of `zk-directory', `zk-file-name-separator', and
-`zk-file-name-separator'."
-  (replace-regexp-in-string " "
-                            zk-file-name-separator
-                            (format "%s/%s%s.%s"
-                                    zk-directory
-                                    id
-                                    (if title
-                                        (concat zk-file-name-separator title)
-                                      "")
-                                    zk-file-extension)))
+Takes an ID and TITLE and returns a full file path, based on values of
+`zk-directory', `zk-directory-subdir-function', `zk-file-name-separator', and
+`zk-file-extension'. If no TITLE is supplied, the file name will consist of
+ID only."
+  (let ((file-name
+         (string-replace " "
+                         zk-file-name-separator
+                         (format "%s%s.%s"
+                                 id
+                                 (if title
+                                     (concat zk-file-name-separator title)
+                                   "")
+                                 zk-file-extension))))
+    (expand-file-name
+     file-name
+     (expand-file-name (funcall zk-directory-subdir-function id)
+                       zk-directory))))
 
 (defun zk--id-list (&optional str zk-alist)
   "Return a list of zk IDs for notes in `zk-directory'.
