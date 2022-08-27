@@ -453,26 +453,45 @@ file-paths."
     (delete-dups list)))
 
 (defun zk--select-file (&optional prompt list)
-  "Wrapper around `completing-read' to select zk-file.
+  "Wrapper around `completing-read' to select a zk file.
 Offers candidates from `zk--directory-files', or from LIST when
 supplied. Can take a PROMPT argument."
-  (let* ((files (or list
-                    (zk--directory-files t))))
-    (completing-read
-     (or prompt
-         "Select File: ")
-     (lambda (string predicate action)
-       (if (eq action 'metadata)
-           `(metadata
-             (group-function . zk--group-function)
-             (category . zk-file))
-         (complete-with-action action files string predicate)))
-     nil t nil 'zk-file-history)))
+  (let* ((hash (make-hash-table :test #'equal))
+         (alist (zk--alist (or list (zk--directory-files)))))
+    ;; Generate the completion table
+    (mapc (lambda (item)
+            (let ((id-title (concat (zk--triplet-id item)
+                                    " "
+                                    (zk--triplet-title item))))
+              (setf (gethash id-title hash)
+                    (zk--triplet-file item))))
+          alist)
+    (gethash
+     (completing-read (or prompt "Select File: ")
+                      (lambda (string predicate action)
+                        (if (eq action 'metadata)
+                            `(metadata
+                              (category . zk-file)
+                              (group-function . zk--group-function)
+                              (annotation-function
+                               . ,(lambda (cand)
+                                    "Add annotation to the candidate."
+                                    (zk--triplet-title (assoc-string cand alist)))))
+                          (complete-with-action action hash string predicate)))
+                      nil t nil 'zk-file-history)
+     hash)))
 
-(defun zk--group-function (file transform)
-  "TRANSFORM completion candidate FILE to note title."
-  (if transform
-      (zk--parse-file 'title file)
+(defun zk--group-function (candidate transform)
+  "TRANSFORM completion CANDIDATE into a note title."
+  ;; FIXME: This is a hack, since it assumes that
+  ;; `zk--select-file' will have resulted in candidates
+  ;; similar to the standard file name format. To be more
+  ;; robust, this needs to figure out how candidates were
+  ;; formatted, and see if there is a way to get file name or
+  ;; id from that.
+  (if (and transform
+           (string-match (zk--file-name-regexp) candidate))
+      (concat (match-string 1 candidate) (match-string 2 candidate))
     "zk"))
 
 (defun zk--id-at-point ()
