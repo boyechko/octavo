@@ -605,10 +605,8 @@ with query term STRING."
 
 (defun zk-index--current-file-list ()
   "Return list files in current index."
-  (let* ((ids (zk-index--current-id-list (buffer-name)))
-         (files (zk--parse-id 'file-path ids)))
-    (when files
-      files)))
+  (let ((ids (zk-index--current-id-list (buffer-name))))
+    (zk--parse-ids 'file-path ids)))
 
 (defun zk-index--sort-created (list)
   "Sort LIST for latest created."
@@ -920,7 +918,7 @@ even if `zk-index-desktop-current' is set."
                    (car
                     (funcall
                      zk-index-format-function
-                     (list (zk--parse-id 'file-path files)))))))
+                     (list (zk--parse-ids 'file-path files)))))))
           ((and files
                 (< 1 (length files)))
            (setq items

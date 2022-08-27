@@ -102,11 +102,7 @@ Takes WIN, OBJ, and POS arguments."
   (save-excursion
     (goto-char pos)
     (re-search-backward zk-id-regexp)
-    (format
-     "%s"
-     (zk--parse-id
-      'title
-      (match-string 0)))))
+    (format "%s" (zk--parse-id 'title (match-string 0)))))
 
 (provide 'zk-org-link)
 

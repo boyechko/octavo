@@ -477,38 +477,35 @@ supplied. Can take a PROMPT argument."
                     file)))
           (zk--directory-files t)))
 
-(defun zk--parse-id (target ids &optional zk-alist)
+(defun zk--parse-id (target id &optional zk-alist)
+  "Return TARGET, either 'file-path or 'title, for the given ID. If ZK-ALIST is
+non-nil, retrieve based on information there. Otherwise, try to get the
+information from the (hypothetical) file name."
+  (let (file-path)
+    (if (and (null zk-alist)
+             (string-match (zk--file-name-regexp t)
+                           (setq file-path (zk--new-file-path id))))
+        (pcase target
+          ('file-path file-path)
+          ('title (match-string 2 file-path))
+          (_ (error "Unknown target %s" target)))
+      (let ((item (assoc id zk-alist #'string=)))
+        (when item
+          (pcase target
+            ('file-path (zk--triplet-file item))
+            ('title (zk--triplet-title item))
+            (_ (error "Unknown target %s" target))))))))
+
+(defun zk--parse-ids (target ids &optional zk-alist)
   "Return TARGET, either `file-path or `title, from files with IDS.
 Takes a single ID, as a string, or a list of IDs. Takes an
 optional ZK-ALIST, for efficiency if `zk--parse-id' is called
 in an internal loop."
-  (let* ((zk-alist (or zk-alist
-                       (zk--alist)))
-         (zk-id-list (zk--id-list nil zk-alist))
-         (return
-          (cond ((eq target 'file-path)
-                 (cond ((stringp ids)
-                        (if (member ids zk-id-list)
-                            (cddr (assoc ids zk-alist))
-                          (user-error "No file associated with %s" ids)))
-                       ((listp ids)
-                        (mapcar
-                         (lambda (x)
-                           (caddr (assoc x zk-alist)))
-                         ids))))
-                ((eq target 'title)
-                 (cond ((stringp ids)
-                        (if (member ids zk-id-list)
-                            (cadr (assoc ids zk-alist))
-                          (user-error "No file associated with %s" ids)))
-                       ((listp ids)
-                        (mapcar
-                         (lambda (x)
-                           (cadr (assoc x zk-alist)))
-                         ids)))))))
-    (if (eq 1 (length return))
-        (car return)
-      return)))
+  (let* ((files (zk--directory-files))
+         (zk-alist (or zk-alist (zk--alist files))))
+    (mapcar (lambda (id)
+              (zk--parse-id target id zk-alist))
+            ids)))
 
 (defun zk--parse-file (target file-or-files)
   "Return TARGET, either `id or `title, from FILE-OR-FILES.
@@ -1006,7 +1003,7 @@ Select TAG, with completion, from list of all tags in zk notes."
   "Find unlinked notes."
   (interactive)
   (let* ((ids (zk--unlinked-notes-list))
-         (notes (zk--parse-id 'file-path ids)))
+         (notes (zk--parse-ids 'file-path ids)))
     (if notes
         (find-file (funcall zk-select-file-function "Unlinked notes: " notes))
       (user-error "No unlinked notes found"))))
