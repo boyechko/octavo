@@ -789,26 +789,26 @@ Optionally call a custom function by setting the variable
 ;;; Insert Link
 
 ;;;###autoload
-(defun zk-insert-link (id &optional title)
-  "Insert link to note with ID and optional TITLE.
-By default, only a link is inserted. With prefix-argument, both
-link and title are inserted. See variable `zk-link-and-title'
-for additional configurations."
-  (interactive (list (zk--parse-file 'id (funcall zk-select-file-function "Insert link: "))))
+(defun zk-insert-link (file &optional title)
+  "Insert into current note a link to FILE with optional TITLE.
+By default, only the zk ID is inserted. With prefix-argument, both link and
+title are inserted. See variable `zk-link-and-title' for additional
+configurations."
+  (interactive (list (funcall zk-select-file-function "Insert link: ")))
   (let* ((pref-arg current-prefix-arg)
-         (title (or title
-                    (zk--parse-id 'title id))))
-    (cond
-     ((or (and (not pref-arg) (eq 't zk-link-and-title))
-          (and pref-arg (not zk-link-and-title)))
-      (zk--insert-link-and-title id title))
-     ((and (not pref-arg) (eq 'ask zk-link-and-title))
-      (if (y-or-n-p "Include title? ")
-          (zk--insert-link-and-title id title)
-        (zk--insert-link id)))
-     ((or t
-          (and pref-arg (eq 't zk-link-and-title)))
-      (zk--insert-link id)))))
+         (id (zk--parse-file 'id file))
+         (title (or title (zk--parse-file 'title file))))
+    (cond ((or (and (not pref-arg) (eq 't zk-link-and-title))
+               (and pref-arg (not zk-link-and-title)))
+           (zk--insert-link-and-title id title))
+          ((and (not pref-arg)
+                (eq 'ask zk-link-and-title))
+           (if (y-or-n-p "Include title? ")
+               (zk--insert-link-and-title id title)
+             (zk--insert-link id)))
+          ((or t
+               (and pref-arg (eq 't zk-link-and-title)))
+           (zk--insert-link id)))))
 
 (defun zk--insert-link (id)
   "Insert link to note with ID, with button optional."
