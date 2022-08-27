@@ -480,8 +480,9 @@ or 'search) of query matching matching REGEXP."
         (setq zk-index-query-mode-line mode-line)
         (zk-index--set-mode-line mode-line)
         (zk-index--reset-mode-name)))
-    (or files
-        (message "No matches for \"%s\"" regexp))))
+    (unless files
+      (message "No matches for \"%s\"" regexp))
+    files))
 
 (defun zk-index-query-mode-line (query-type string)
   "Generate new mode line after query.
