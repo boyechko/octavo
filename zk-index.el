@@ -456,15 +456,6 @@ Takes form of (COMMAND . TERM), where COMMAND is 'ZK-INDEX-FOCUS
 or 'ZK-INDEX-SEARCH, and TERM is the query string. Recent
 items listed first.")
 
-(defvar zk-index--current-query-files nil
-  "A list of files from the last successful `zk-index-focus' or
-`zk-index-search'.")
-
-(defun zk-index-refresh-current-query ()
-  "Refresh the ZK-Index buffer with the current subset of files."
-  (interactive)
-  (zk-index-refresh zk-index--current-query-files))
-
 (defun zk-index-query-files (type regexp)
   "Return narrowed list of notes after the given TYPE (either 'focus
 or 'search) of query matching matching REGEXP."
