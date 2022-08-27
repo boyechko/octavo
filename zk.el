@@ -495,11 +495,9 @@ try to get the information from the (hypothetical) file name."
 
 (defun zk--parse-ids (target ids &optional zk-alist)
   "Return TARGET, either `file-path or `title, from files with IDS.
-Takes a single ID, as a string, or a list of IDs. Takes an
-optional ZK-ALIST, for efficiency if `zk--parse-id' is called
-in an internal loop."
-  (let* ((files (zk--directory-files))
-         (zk-alist (or zk-alist (zk--alist files))))
+Takes a single ID, as a string, or a list of IDs. Takes an optional
+ZK-ALIST for efficiency."
+  (let* ((zk-alist (or zk-alist (zk--alist (zk--directory-files)))))
     (mapcar (lambda (id)
               (zk--parse-id target id zk-alist))
             ids)))
