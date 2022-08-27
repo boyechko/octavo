@@ -424,11 +424,11 @@ title (like those used `zk--alist')."
 ;;;; Index Search
 ;; narrow index based on search of notes' full text
 
-(defun zk-index-search ()
-  "Narrow index based on regexp search of note contents."
-  (interactive)
+(defun zk-index-search (regexp)
+  "Narrow index based on REGEXP search of note contents."
+  (interactive (list (read-string "Search: " nil 'zk-search-history)))
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh (zk-index-query-files)
+      (zk-index-refresh (zk-index-query-files 'search regexp)
                         zk-index-last-format-function
                         zk-index-last-sort-function
                         (buffer-name))
@@ -438,11 +438,11 @@ title (like those used `zk--alist')."
 ;; narrow index based on search of note titles (case sensitive)
 ;; an alternative to consult-focus-lines
 
-(defun zk-index-focus ()
-  "Narrow index based on regexp search of note titles."
-  (interactive)
+(defun zk-index-focus (regexp)
+  "Narrow index based on REGEXP search of note titles."
+  (interactive (list (read-string "Focus: " nil 'zk-search-history)))
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh (zk-index-query-files)
+      (zk-index-refresh (zk-index-query-files 'focus regexp)
                         zk-index-last-format-function
                         zk-index-last-sort-function
                         (buffer-name))
@@ -465,49 +465,42 @@ items listed first.")
   (interactive)
   (zk-index-refresh zk-index--current-query-files))
 
-(defun zk-index-query-files ()
-  "Return narrowed list of notes, based on focus or search query."
-  (let* ((command this-command)
-         (files (zk--directory-files))
-         (scope (if (zk-index-narrowed-p (buffer-name))
-                    (zk-index--current-id-list (buffer-name))
-                  (setq zk-index-query-terms nil)
-                  (zk--id-list files)))
-         (string (read-string (cond ((eq command 'zk-index-focus)
-                                     "Focus: ")
-                                    ((eq command 'zk-index-search)
-                                     "Search: "))
-                              nil 'zk-search-history))
-         (query (cond
-                 ((eq command 'zk-index-focus)
-                  (zk--id-list files string))
-                 ((eq command 'zk-index-search)
-                  (zk--grep-id-list string))))
-         (ids (mapcar (lambda (x) (when (member x scope) x))
-                      query))
-         (files (zk--parse-id 'file-path (remq nil ids))))
-    (add-to-history 'zk-search-history string)
+(defun zk-index-query-files (type regexp)
+  "Return narrowed list of notes after the given TYPE (either 'focus
+or 'search) of query matching matching REGEXP."
+  (let* ((query (pcase type
+                 ('focus
+                  (zk--grep-file-list (concat "^# .*" regexp))) ; FIXME: Hardcoded
+                 ('search
+                  (zk--grep-file-list regexp))
+                 (_
+                  (error "Unknown query type %s" type))))
+         (scope (zk-index--current-id-list (buffer-name)))
+         (files (cl-remove-if-not
+                 (lambda (file)
+                   (when (cl-find-if (lambda (id)
+                                       (string-match (zk--file-name-regexp id) file))
+                                     scope)
+                     file))
+                 query)))
+    (add-to-history 'zk-search-history regexp)
     (when files
-      (setq zk-index--current-query-files files)
-      (let ((mode-line (zk-index-query-mode-line command string)))
+      (let ((mode-line (zk-index-query-mode-line type regexp)))
         (setq zk-index-query-mode-line mode-line)
         (zk-index--set-mode-line mode-line)
         (zk-index--reset-mode-name)))
-    (when (stringp files)
-      (setq files (list files)))
     (or files
-        (error "No matches for \"%s\"" string))))
+        (message "No matches for \"%s\"" regexp))))
 
-(defun zk-index-query-mode-line (query-command string)
+(defun zk-index-query-mode-line (query-type string)
   "Generate new mode line after query.
-QUERY-COMMAND is either `zk-index-focus' or `zk-index-search',
-with query term STRING."
-  (push (cons query-command string) zk-index-query-terms)
+QUERY-TYPE is either 'focus or 'search, with query term STRING."
+  (push (cons query-type string) zk-index-query-terms)
   ;; Sort the different terms into two lists
   (let (focused
         searched)
     (dolist (term zk-index-query-terms)
-      (if (equal (car term) 'zk-index-focus)
+      (if (equal (car term) 'focus)
           (push term focused)
         (push term searched)))
     ;; Format each list and update appropriate list
@@ -523,15 +516,13 @@ with query term STRING."
               (mapconcat (lambda (query)
                            (when query
                              (concat
-                              (capitalize
-                               (caddr
-                                (split-string (symbol-name (car query)) "-")))
+                              (capitalize (symbol-name (car query)))
                               ": \""
                               (cdr query))))
                          ;; Put the last query type at the end
                          (sort (remq nil formatted)
                                (lambda (a _b)
-                                 (not (equal (car a) query-command))))
+                                 (not (equal (car a) query-type))))
                          "\" | ")
               "\"]"))))
 
