@@ -474,13 +474,14 @@ supplied. Can take a PROMPT argument."
           (zk--directory-files t)))
 
 (defun zk--parse-id (target id &optional zk-alist)
-  "Return TARGET, either 'file-path or 'title, for the given ID. If ZK-ALIST is
-non-nil, retrieve based on information there. Otherwise, try to get the
-information from the (hypothetical) file name."
+  "Return TARGET, either 'file-path or 'title, for the given ID. If
+ZK-ALIST is non-nil, retrieve based on information there. Otherwise,
+try to get the information from the (hypothetical) file name."
   (let (file-path)
     (if (and (null zk-alist)
              (string-match (zk--file-name-regexp t)
-                           (setq file-path (zk--new-file-path id))))
+                           (setq file-path
+                             (zk--new-file-path id (match-string 2)))))
         (pcase target
           ('file-path file-path)
           ('title (match-string 2 file-path))
