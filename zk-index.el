@@ -828,8 +828,7 @@ If `zk-index-auto-scroll' is non-nil, show note in other window."
 (defun zk-index-desktop-make-buttons ()
   "Re-make buttons in ZK-Desktop."
   (interactive)
-  (when (and (string-match-p zk-index-desktop-basename (buffer-name))
-             (file-in-directory-p default-directory zk-index-desktop-directory))
+  (when (string-match-p zk-index-desktop-basename (buffer-name))
     (let ((inhibit-read-only t))
       (save-excursion
         ;; replace titles
