@@ -287,7 +287,7 @@ will be used by default."
   "Refresh the index.
 Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   (interactive)
-  (let ((inhibit-message t)
+  (let ((inhibit-message nil)
         (inhibit-read-only t)
         (files (zk-index--sort (or files (zk--directory-files)) sort-fn)))
     (with-current-buffer (or buf-name zk-index-buffer-name)
