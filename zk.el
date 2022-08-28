@@ -460,9 +460,12 @@ supplied. Can take a PROMPT argument."
          (alist (zk--alist (or list (zk--directory-files)))))
     ;; Generate the completion table
     (mapc (lambda (item)
+            ;; TODO: Make format customizable, like `zk-index-format'
             (let ((id-title (concat (zk--triplet-id item)
                                     " "
                                     (zk--triplet-title item))))
+              ;; Each hash key is in the form of "id<space>title";
+              ;; value is the file name.
               (setf (gethash id-title hash)
                     (zk--triplet-file item))))
           alist)
