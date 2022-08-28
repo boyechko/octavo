@@ -593,34 +593,42 @@ QUERY-TYPE is either 'focus or 'search, with query term STRING."
   (let ((ids (zk-index--current-id-list (buffer-name))))
     (zk--parse-ids 'file-path ids)))
 
-(defun zk-index--sort-created (list)
-  "Sort LIST for latest created."
-  (let ((ht (make-hash-table :test #'equal :size 5000)))
+(defun zk-index--sort-created (list &optional predicate)
+  "Sort LIST alphabetically based on the ID. If not given, PREDICATE defaults
+to `string<' (i.e. ascending order)."
+  (let ((ht (make-hash-table :test #'equal :size 5000))
+        (predicate (or predicate #'string>))) ; FIXME: personal preference
     (dolist (x list)
       (puthash x (zk--parse-file 'id x) ht))
     (sort list
           (lambda (a b)
             (let ((id-a (gethash a ht))
                   (id-b (gethash b ht)))
-              (string< id-b id-a))))))
+              (funcall predicate id-b id-a))))))
 
-(defun zk-index--sort-modified (list)
-  "Sort LIST for latest modification."
-  (let ((ht (make-hash-table :test #'equal :size 5000)))
+(defun zk-index--sort-modified (list &optional predicate)
+  "Sort LIST based on file modification attribute. If not given,
+PREDICATE defaults to `time-less-p' (i.e., most recently modified
+first)."
+  (let ((ht (make-hash-table :test #'equal :size 5000))
+        (predicate (or predicate #'time-less-p)))
     (dolist (x list)
       (puthash x (file-attribute-modification-time (file-attributes x)) ht))
     (sort list
           (lambda (a b)
             (let ((time-a (gethash a ht))
                   (time-b (gethash b ht)))
-              (time-less-p time-b time-a))))))
+              (funcall predicate time-b time-a))))))
 
-(defun zk-index--sort-size (list)
-  "Sort LIST for latest modification."
-  (sort list
-        (lambda (a b)
-          (> (file-attribute-size (file-attributes a))
-             (file-attribute-size (file-attributes b))))))
+(defun zk-index--sort-size (list &optional predicate)
+  "Sort LIST by file size. If not given, PREDICATE defaults to `>'
+(i.e. largest first)."
+  (let ((predicate (or predicate #'>)))
+    (sort list
+          (lambda (a b)
+            (funcall predicate
+                     (file-attribute-size (file-attributes a))
+                     (file-attribute-size (file-attributes b)))))))
 
 ;;; ZK-Index Keymap Commands
 
