@@ -563,12 +563,12 @@ otherwise just match the base name.
 
 Group 1 is the zk ID.
 Group 2 is the title."
-  (concat "\\(?1:" zk-id-regexp "\\)"
-          (unless zk-file-name-id-only
-            (concat zk-file-name-separator
-                    "\\(?2:[^.]*?\\)"))
-          (when with-extension
-            (concat "\\." zk-file-extension))))
+  `(concat "\\(?1:" zk-id-regexp "\\)"
+           (unless zk-file-name-id-only
+             (concat zk-file-name-separator
+                     "\\(?2:[^.]*?\\)"))
+           ,@(when with-extension
+               '("\\." zk-file-extension))))
 
 (defun zk-parse-file-name (target file)
   "Return TARGET, either `id or `title, from the given FILE.
