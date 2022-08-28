@@ -151,7 +151,7 @@ Set it so that it matches strings generated with
 
 ;; FIXME: This is a hack, since just treats the ID as anything after # and not
 ;; containing spaces.
-(defmacro zk-header-title-line-regexp ()
+(defcustom zk-header-title-line-regexp
   "^# \\(?1:[^ ]+\\) \\(?2:.*\\)$"
   "Regexp of the zk file's first header line, which contains the note ID and
 title, and is followed by the YAML-style header block.
