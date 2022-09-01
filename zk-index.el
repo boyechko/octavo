@@ -134,6 +134,7 @@ To quickly change this setting, call `zk-index-desktop-add-toggle'."
     (define-key map (kbd "o") #'other-window)
     (define-key map (kbd "f") #'zk-index-focus)
     (define-key map (kbd "s") #'zk-index-search)
+    (define-key map (kbd "g") #'zk-index-query-refresh)
     (define-key map (kbd "d") #'zk-index-send-to-desktop)
     (define-key map (kbd "D") #'zk-index-switch-to-desktop)
     (define-key map (kbd "c") #'zk-index-current-notes)
@@ -373,8 +374,9 @@ title (like those used `zk--alist')."
 
 (defun zk-index-button-display-action (file buffer)
   "Function to display FILE or BUFFER on button press in Index and Desktop."
-  (if (file-in-directory-p zk-index-desktop-directory
-                           default-directory)
+  (if (and zk-index-desktop-directory
+	       (file-in-directory-p zk-index-desktop-directory
+				                default-directory))
       ;; display action for ZK-Desktop
       (progn
         (if (one-window-p)
@@ -507,6 +509,17 @@ or 'search) of query matching matching REGEXP."
     (unless files
       (message "No matches for \"%s\"" regexp))
     files))
+
+(defun zk-index-query-refresh ()
+  "Refresh narrowed index, based on last focus or search query."
+  (interactive)
+  (let ((mode mode-name)
+        (files (zk-index--current-file-list)))
+    (unless (stringp files)
+      (zk-index-refresh files
+                        nil
+                        zk-index-last-sort-function)
+      (setq mode-name mode))))
 
 (defun zk-index-query-mode-line (query-type string)
   "Generate new mode line after query.
@@ -800,6 +813,8 @@ If `zk-index-auto-scroll' is non-nil, show note in other window."
 (defun zk-index-desktop-select ()
   "Select a ZK-Desktop to work with."
   (interactive)
+  (unless zk-index-desktop-directory
+    (error "Please set `zk-index-desktop-directory' first"))
   (let* ((last-command last-command)
          (desktop
           (completing-read "Select or Create ZK-Desktop: "
@@ -920,7 +935,7 @@ even if `zk-index-desktop-current' is set."
                          (zk-index-desktop-select)
                        zk-index-desktop-current)))
   (unless zk-index-desktop-directory
-    (error "Please set 'zk-index-desktop-directory'"))
+    (error "Please set `zk-index-desktop-directory' first"))
   (let ((inhibit-read-only t)
         items)
     (cond ((eq 1 (length files))
