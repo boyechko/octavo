@@ -456,12 +456,37 @@ Takes form of (COMMAND . TERM), where COMMAND is 'ZK-INDEX-FOCUS
 or 'ZK-INDEX-SEARCH, and TERM is the query string. Recent
 items listed first.")
 
+;; See https://www.gnu.org/software/gnulib/manual/html_node/Regular-expression-syntaxes.html
+(defun zk-index--egrepify-emacs-regexp (regexp)
+  "Make some basic conversions between Emacs regexp syntax and egrep syntax."
+  (dolist (tuple
+           '(("\\\\\\([(){}]\\)" . "\\1") ; unescape () and {}
+             ("\\\\" . "")           ; strip other double backslashes
+             ("(\\?[0-9]:" . "(")    ; strip explicit grouping numbers
+             ))
+    (setq regexp
+      (replace-regexp-in-string (car tuple) (cdr tuple) regexp)))
+  regexp)
+
+(defun zk-index--construct-title-line-regexp (regexp)
+  "Insert REGEXP into `zk-header-title-line-regexp' and convert to (extended)
+grep style."
+  ;; Replace everything from beginning of group #2, i.e. the title, to the end
+  ;; of the line with the user-provided regexp.
+  (zk-index--egrepify-emacs-regexp
+   (concat
+    (replace-regexp-in-string "(\\?2:.*$"
+                              regexp
+                              zk-header-title-line-regexp)
+    ".*")))
+
 (defun zk-index-query-files (type regexp)
   "Return narrowed list of notes after the given TYPE (either 'focus
 or 'search) of query matching matching REGEXP."
   (let* ((query (pcase type
                  ('focus
-                  (zk--grep-file-list (concat "^# .*" regexp))) ; FIXME: Hardcoded
+                  (zk--grep-file-list
+                   (zk-index--construct-title-line-regexp regexp) t))
                  ('search
                   (zk--grep-file-list regexp))
                  (_
