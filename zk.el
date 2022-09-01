@@ -326,7 +326,8 @@ data."
                     (t
                      (signal 'wrong-type-argument '(file))))))
     (and file
-         (string-match (zk--file-name-regexp t) file)
+         (string-match (zk--file-name-regexp t)
+                       (file-name-nondirectory file))
          (or (not strict)
              (file-in-directory-p file zk-directory)))))
 
@@ -583,12 +584,14 @@ otherwise just match the base name.
 
 Group 1 is the zk ID.
 Group 2 is the title."
-  `(concat "\\(?1:" zk-id-regexp "\\)"
+  `(concat "^"
+           "\\(?1:" zk-id-regexp "\\)"
            (unless zk-file-name-id-only
              (concat zk-file-name-separator
                      "\\(?2:[^.]*?\\)"))
            ,@(when with-extension
-               '("\\." zk-file-extension))))
+               '("\\." zk-file-extension))
+           "$"))
 
 (defun zk-parse-file-name (target file)
   "Return TARGET, either `id or `title, from the given FILE.
