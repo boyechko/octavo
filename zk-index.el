@@ -494,10 +494,9 @@ or 'search) of query matching matching REGEXP."
          (scope (zk-index--current-id-list (buffer-name)))
          (files (cl-remove-if-not
                  (lambda (file)
-                   (when (cl-find-if (lambda (id)
-                                       (string-match (zk--file-name-regexp id) file))
-                                     scope)
-                     file))
+                   (cl-find (zk--parse-file 'id file)
+                            scope
+                            :test #'string=))
                  query)))
     (add-to-history 'zk-search-history regexp)
     (when files
