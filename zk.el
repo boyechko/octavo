@@ -634,7 +634,7 @@ from the file header."
             (insert-file-contents file)
             (goto-char (point-min))
             (when (re-search-forward zk-header-title-line-regexp nil t)
-              (match-string-no-properties 1))))))))
+              (match-string-no-properties 2))))))))
 
 ;;; Buttons
 
