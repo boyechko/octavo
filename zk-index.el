@@ -338,12 +338,13 @@ If no SORT-FN is given, use `zk-index--sort-modified'."
 If given, FORMAT-FN is used to format the line, otherwise
 `zk-index-format-function' is used. Returns a triplet of file, id, and
 title (like those used `zk--alist')."
-  (let ((beg (point))
-        (id (zk--parse-file 'id file))
-        (title (zk--parse-file 'title file)))
-    (insert zk-index-prefix
-            (funcall (or format-fn zk-index-format-function) id title))
-    (zk-index--make-button beg (point-at-eol) file id title)))
+  (when file
+    (let ((beg (point))
+          (id (zk--parse-file 'id file))
+          (title (zk--parse-file 'title file)))
+      (insert zk-index-prefix
+              (funcall (or format-fn zk-index-format-function) id title))
+      (zk-index--make-button beg (point-at-eol) file id title))))
 
 ;;;###autoload
 (defun zk-index-make-buttons ()
