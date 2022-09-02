@@ -636,11 +636,11 @@ QUERY-TYPE is either 'focus or 'search, with query term STRING."
   (let ((ids (zk-index--current-id-list (buffer-name))))
     (zk--parse-ids 'file-path ids)))
 
-(defun zk-index--sort-created (list &optional predicate)
-  "Sort LIST alphabetically based on the ID. If not given, PREDICATE defaults
-to `string<' (i.e. ascending order)."
+(defun zk-index--sort-created (list &optional descending)
+  "Sort LIST alphabetically in ascending order based on the ID.
+If DESCENDING is non-nil, sort in descending order instead."
   (let ((ht (make-hash-table :test #'equal :size 5000))
-        (predicate (or predicate #'string>))) ; FIXME: personal preference
+        (predicate (if descending #'string> #'string<)))
     (dolist (x list)
       (puthash x (zk--parse-file 'id x) ht))
     (sort list
@@ -649,12 +649,13 @@ to `string<' (i.e. ascending order)."
                   (id-b (gethash b ht)))
               (funcall predicate id-b id-a))))))
 
-(defun zk-index--sort-modified (list &optional predicate)
-  "Sort LIST based on file modification attribute. If not given,
-PREDICATE defaults to `time-less-p' (i.e., most recently modified
-first)."
+(defun zk-index--sort-modified (list &optional descending)
+  "Sort LIST in ascending order based on file modification attribute.
+If DESCENDING is non-nil, sort in descending order instead."
   (let ((ht (make-hash-table :test #'equal :size 5000))
-        (predicate (or predicate #'time-less-p)))
+        (predicate (if descending
+                       (lambda (&rest args) (not (apply #'time-less-p args)))
+                     #'time-less-p)))
     (dolist (x list)
       (puthash x (file-attribute-modification-time (file-attributes x)) ht))
     (sort list
@@ -663,10 +664,10 @@ first)."
                   (time-b (gethash b ht)))
               (funcall predicate time-b time-a))))))
 
-(defun zk-index--sort-size (list &optional predicate)
-  "Sort LIST by file size. If not given, PREDICATE defaults to `>'
-(i.e. largest first)."
-  (let ((predicate (or predicate #'>)))
+(defun zk-index--sort-size (list &optional descending)
+  "Sort LIST in ascending order by file size.
+If DESCENDING is non-nil, sort in descending order instead."
+  (let ((predicate (if descending #'< #'>)))
     (sort list
           (lambda (a b)
             (funcall predicate
