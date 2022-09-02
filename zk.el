@@ -383,7 +383,8 @@ Optional search for regexp STR in file name, case-insenstive."
   (let ((case-fold-search t)
         ids)
     (dolist (file files ids)
-      (when (and (string-match (zk--file-name-regexp t) file)
+      (when (and (string-match (zk--file-name-regexp t)
+                               (file-name-nondirectory file))
                  (or (not str)
                      (and str (match-string 2 file))))
         (push (match-string 1 file) ids)))))
@@ -540,8 +541,9 @@ try to get the information from the (hypothetical) file name."
   (let (file-path)
     (if (and (null zk-alist)
              (string-match (zk--file-name-regexp t)
-                           (setq file-path
-                             (zk--new-file-path id (match-string 2)))))
+                           (file-name-nondirectory
+                            (setq file-path
+                              (zk--new-file-path id (match-string 2))))))
         (pcase target
           ('file-path file-path)
           ('title (match-string 2 file-path))
@@ -600,7 +602,8 @@ A note's title is understood to be the portion of its filename
 following the zk ID, in the format `zk-id-regexp', and preceding
 the file extension. This is the default value of
 `zk-parse-file-function'."
-  (when (string-match (zk--file-name-regexp) file)
+  (when (string-match (zk--file-name-regexp t)
+                      (file-name-nondirectory file))
     (pcase target
       ('id    (match-string 1 file))
       ('title (unless (string-empty-p (match-string 2 file))
@@ -626,8 +629,9 @@ defined by `zk-header-line-regexp'."
   "Return TARGET, either 'id or 'title, from the given FILE.
 Unlike `zk-parse-file-name', attempt to get the note title
 from the file header."
-  (when (string-match (zk--file-name-regexp) file)
-    (let ((id (match-string 1 file)))
+  (when (string-match (zk--file-name-regexp t)
+                      (file-name-nondirectory file))
+    (let ((id (match-string 1 (file-name-nondirectory file))))
       (if (eql target 'id)
           id
         (ignore-errors
