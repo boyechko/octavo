@@ -470,17 +470,22 @@ items listed first.")
       (replace-regexp-in-string (car tuple) (cdr tuple) regexp)))
   regexp)
 
-(defun zk-index--construct-title-line-regexp (regexp)
-  "Insert REGEXP into `zk-header-title-line-regexp' and convert to (extended)
-grep style."
+(defun zk-index--construct-title-line-regexp (string &optional verbatim)
+  "Incorporate STRING into `zk-header-title-line-regexp' by replacing spaces
+with '.*', then convert to (extended) grep style. If VERBATIM is non-nil,
+insert the STRING into the query directly."
   ;; Replace everything from beginning of group #2, i.e. the title, to the end
-  ;; of the line with the user-provided regexp.
+  ;; of the line with the user-provided string.
   (zk-index--egrepify-emacs-regexp
    (concat
-    (replace-regexp-in-string "(\\?2:.*$"
-                              regexp
-                              zk-header-title-line-regexp)
-    ".*")))
+    (replace-regexp-in-string "\\\\(\\?2:.*$"
+                              (concat ".*"
+                                      (if verbatim
+                                          string
+                                        (replace-regexp-in-string " " ".*"
+                                                                  string))
+                                      ".*")
+                              zk-header-title-line-regexp))))
 
 (defun zk-index-query-files (type regexp)
   "Return narrowed list of notes after the given TYPE (either 'focus
