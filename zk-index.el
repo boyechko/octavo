@@ -586,41 +586,31 @@ QUERY-TYPE is either 'focus or 'search, with query term STRING."
 
 ;;; Index Sort Functions
 
+(defmacro zk-index--sort-refresh (sort-fn mode-suffix)
+  "Wrapper around `zk-index-refresh' that passes SORT-FN to it, and adds
+MODE-SUFFIX to the mode name."
+  `(if (not (eq major-mode 'zk-index-mode))
+       (user-error "Not in a ZK-Index")
+     (zk-index-refresh (zk-index--current-file-list)
+                       zk-index-last-format-function
+                       ,sort-fn
+                       (buffer-name))
+     (zk-index--set-mode-name ,mode-suffix)))
+
 (defun zk-index-sort-modified ()
   "Sort index by last modified."
   (interactive)
-  (if (eq major-mode 'zk-index-mode)
-      (progn
-        (zk-index-refresh (zk-index--current-file-list)
-                          zk-index-last-format-function
-                          #'zk-index--sort-modified
-                          (buffer-name))
-        (zk-index--set-mode-name " by modified"))
-    (user-error "Not in a ZK-Index")))
+  (zk-index--sort-refresh #'zk-index--sort-modified " by modified"))
 
 (defun zk-index-sort-created ()
   "Sort index by date created."
   (interactive)
-  (if (eq major-mode 'zk-index-mode)
-      (progn
-        (zk-index-refresh (zk-index--current-file-list)
-                          zk-index-last-format-function
-                          #'zk-index--sort-created
-                          (buffer-name))
-        (zk-index--set-mode-name " by created"))
-    (user-error "Not in a ZK-Index")))
+  (zk-index--sort-refresh #'zk-index--sort-created " by created"))
 
 (defun zk-index-sort-size ()
   "Sort index by size."
   (interactive)
-  (if (eq major-mode 'zk-index-mode)
-      (progn
-        (zk-index-refresh (zk-index--current-file-list)
-                          zk-index-last-format-function
-                          #'zk-index--sort-size
-                          (buffer-name))
-        (zk-index--set-mode-name " by size"))
-    (user-error "Not in a ZK-Index")))
+  (zk-index--sort-refresh #'zk-index--sort-size " by size"))
 
 (defun zk-index--set-mode-name (string)
   "Add STRING to `mode-name' in `zk-index-mode'."
