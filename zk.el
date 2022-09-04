@@ -524,22 +524,23 @@ FILES."
   "Return TARGET, either 'file-path or 'title, for the given ID. If
 ZK-ALIST is non-nil, retrieve based on information there. Otherwise,
 try to get the information from the (hypothetical) file name."
-  (let (file-path)
-    (if (and (null zk-alist)
-             (string-match (zk--file-name-regexp t)
-                           (file-name-nondirectory
-                            (setq file-path
-                              (zk--new-file-path id (match-string 2))))))
-        (pcase target
-          ('file-path file-path)
-          ('title (match-string 2 file-path))
-          (_ (error "Unknown target %s" target)))
-      (let ((item (assoc id zk-alist #'string=)))
-        (when item
+  (if-let ((file-path
+            (and (null zk-alist)
+                 (string-match (zk--file-name-regexp t)
+                               (file-name-nondirectory
+                                (zk--new-file-path id (match-string 2)))))))
+      (pcase target
+        ('file-path file-path)
+        ('title (or (match-string 2 file-path)
+                    (zk--parse-file 'title file-path)))
+        (_ (error "Unknown target %s" target)))
+    (let ((item (assoc id zk-alist #'string=)))
+      (if item
           (pcase target
             ('file-path (zk--triplet-file item))
             ('title (zk--triplet-title item))
-            (_ (error "Unknown target %s" target))))))))
+            (_ (error "Unknown target %s" target)))
+        (error "No such ID in zk-alist: %s" id)))))
 
 (defun zk--parse-ids (target ids &optional zk-alist)
   "Return TARGET, either `file-path or `title, from files with IDS.
