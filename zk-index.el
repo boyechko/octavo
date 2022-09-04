@@ -626,43 +626,50 @@ MODE-SUFFIX to the mode name."
   (let ((ids (zk-index--current-id-list (buffer-name))))
     (zk--parse-ids 'file-path ids)))
 
-(defun zk-index--sort-created (list &optional descending)
-  "Sort LIST alphabetically in ascending order based on the ID.
-If DESCENDING is non-nil, sort in descending order instead."
-  (let ((ht (make-hash-table :test #'equal :size 5000))
-        (predicate (if descending #'string> #'string<)))
-    (dolist (x list)
-      (puthash x (zk--parse-file 'id x) ht))
-    (sort list
+(defun zk-index--sort-internal (files predicate key-fn)
+  "Sort FILES with PREDICATE, a function of two arguments, that returns non-nil
+if the first argument should come before second. KEY-FN is a function
+accepting a file path and returning the key used by the PREDICATE."
+  (let ((ht (make-hash-table :test #'equal :size 5000)))
+    (dolist (x files)
+      (puthash x (funcall key-fn x) ht))
+    (sort files
           (lambda (a b)
-            (let ((id-a (gethash a ht))
-                  (id-b (gethash b ht)))
-              (funcall predicate id-b id-a))))))
+            (let ((a-val (gethash a ht))
+                  (b-val (gethash b ht)))
+              (funcall predicate a-val b-val))))))
 
-(defun zk-index--sort-modified (list &optional descending)
-  "Sort LIST in ascending order based on file modification attribute.
-If DESCENDING is non-nil, sort in descending order instead."
-  (let ((ht (make-hash-table :test #'equal :size 5000))
-        (predicate (if descending
-                       (lambda (&rest args) (not (apply #'time-less-p args)))
-                     #'time-less-p)))
-    (dolist (x list)
-      (puthash x (file-attribute-modification-time (file-attributes x)) ht))
-    (sort list
-          (lambda (a b)
-            (let ((time-a (gethash a ht))
-                  (time-b (gethash b ht)))
-              (funcall predicate time-b time-a))))))
+(defun zk-index--sort-created (files &optional descending)
+  "Sort FILES alphabetically by creation time (based on ID).
+If DESCENDING is non-nil, sort in descending order."
+  (zk-index--sort-internal
+   files
+   (if descending #'string> #'string<)
+   (lambda (file)
+     (zk--parse-file 'id file))))
 
-(defun zk-index--sort-size (list &optional descending)
-  "Sort LIST in ascending order by file size.
-If DESCENDING is non-nil, sort in descending order instead."
-  (let ((predicate (if descending #'< #'>)))
-    (sort list
-          (lambda (a b)
-            (funcall predicate
-                     (file-attribute-size (file-attributes a))
-                     (file-attribute-size (file-attributes b)))))))
+(defun zk-index--sort-modified (files &optional descending)
+  "Sort FILES based on last modification.
+If DESCENDING is non-nil, sort in descending order."
+  (let ((sorted (zk-index--sort-internal
+                 files
+                 #'time-less-p
+                 (lambda (file)
+                   (file-attribute-modification-time
+                    (file-attributes file))))))
+    (if descending
+        (nreverse sorted)
+      sorted)))
+
+(defun zk-index--sort-size (files &optional descending)
+  "Sort FILES by file size.
+If DESCENDING is non-nil, sort in descending order."
+  (zk-index--sort-internal
+   files
+   (if descending #'> #'<)
+   (lambda (file)
+     (file-attribute-size
+      (file-attributes file)))))
 
 ;;; ZK-Index Keymap Commands
 
