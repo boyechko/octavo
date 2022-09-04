@@ -316,9 +316,9 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
 If no SORT-FN is given, use `zk-index--sort-modified'."
   (if (eq 1 (length files))
       files
-    (nreverse (funcall (or sort-fn
-                           'zk-index--sort-modified)
-                       files))))
+    (funcall (or sort-fn
+                 'zk-index--sort-modified)
+             files)))
 
 (eval-and-compile
   (define-button-type 'zk-index
