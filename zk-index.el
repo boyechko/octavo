@@ -77,6 +77,15 @@
   "Hide cursor in `zk-index-view-mode'."
   :type 'boolean)
 
+(defcustom zk-index-sort-order '((t . ascending))
+  "An alist matching sort functions with sort order (ascending or descending).
+For example:
+((MODIFIED . DESCENDING)
+ (CREATED . DESCENDING)
+ (SIZE . ASCENDING))
+If sort function is T, the order applies to all functions."
+  :type 'alist)
+
 (defcustom zk-index-button-display-function 'zk-index-button-display-action
   "Function called when buttons pressed in ZK-Index and ZK-Desktop.
 The function is called by `zk-index-button-action'. A custom
@@ -314,11 +323,17 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
 (defun zk-index--sort (files &optional sort-fn)
   "Sort FILES (destructively) with SORT-FN.
 If no SORT-FN is given, use `zk-index--sort-modified'."
-  (if (eq 1 (length files))
-      files
-    (funcall (or sort-fn
-                 'zk-index--sort-modified)
-             files)))
+  (let* ((sort-fn (or sort-fn 'zk-index--sort-modified))
+         (last-word
+          ;; NOTE: Assumes last word of SORT-FN will describe sort type.
+          (when (string-match "-\\([a-z]+\\)$" (symbol-name sort-fn))
+            (intern (match-string 1 (symbol-name sort-fn)))))
+         (sort-order (or (alist-get last-word zk-index-sort-order)
+                         (alist-get t zk-index-sort-order))))
+    (if (eq 1 (length files))
+        files
+      (prog1 (funcall sort-fn files (eq sort-order 'descending))
+        (setq zk-index-last-sort-function sort-fn)))))
 
 (eval-and-compile
   (define-button-type 'zk-index
