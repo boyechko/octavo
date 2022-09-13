@@ -336,17 +336,17 @@ appropriate for the `zk--triplet-file', `zk--triplet-id', and
 `zk--triplet-title' accessors."
   `(list ,id ,title ,file))
 
-(defmacro zk--triplet-id (triplet)
+(defun zk--triplet-id (triplet)
   "Return the id from the given TRIPLET from `zk-alist'."
-  `(elt ,triplet 0))
+  (elt triplet 0))
 
-(defmacro zk--triplet-title (triplet)
+(defun zk--triplet-title (triplet)
   "Return the title from the given TRIPLET from `zk-alist'."
-  `(elt ,triplet 1))
+  (elt triplet 1))
 
-(defmacro zk--triplet-file (triplet)
+(defun zk--triplet-file (triplet)
   "Return the file path from the given TRIPLET from `zk-alist'."
-  `(elt ,triplet 2))
+  (elt triplet 2))
 
 (defun zk--generate-id ()
   "Generate and return a zk ID.
