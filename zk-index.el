@@ -289,9 +289,9 @@ will be used by default."
       (when files
         (zk-index-refresh files format-fn sort-fn buf-name))
       (goto-char (point-min)))
-    (pop-to-buffer buf-name
-                   '(display-buffer-at-bottom))))
-
+    (unless (string= buf-name (buffer-name))
+      (pop-to-buffer buf-name
+                     '(display-buffer-at-bottom)))))
 
 (defun zk-index-refresh (&optional files format-fn sort-fn buf-name)
   "Refresh the index.
