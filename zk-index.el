@@ -53,6 +53,10 @@
   "Name for ZK-Index buffer."
   :type 'string)
 
+(defcustom zk-index-current-notes-buffer-name "*ZK-Index-Current*"
+  "Name for ZK-Index buffer listing current notes."
+  :type 'string)
+
 (defcustom zk-index-format-function 'zk-index--format-line
   "Default formatting function for listing notes in ZK-Index."
   :type 'function)
@@ -710,12 +714,40 @@ If DESCENDING is non-nil, sort in descending order."
         (setq-local zk-index-view--kill t)
         (zk-index-view-mode)))))
 
+(defun zk-index-kill-visiting-buffer (&optional file-or-buffer)
+  "Kill the visiting FILE-OR-BUFFER. Without arguments, gets the buffer from
+the current line of currently visiting `zk-index-mode'."
+  (interactive)
+  (let ((buffer (cond ((bufferp file-or-buffer)
+                       file-or-buffer)
+                      ((stringp file-or-buffer)
+                       (get-file-buffer file-or-buffer))
+                      ((eq major-mode 'zk-index-mode)
+                       (get-file-buffer
+                        (zk--parse-id 'file-path
+                                      (zk-index--button-at-point)))))))
+    (if (not buffer)
+        (error "Can't figure out which buffer to kill")
+      (kill-buffer-ask buffer)
+      (when (get-buffer zk-index-current-notes-buffer-name)
+        (zk-index-refresh (zk--current-notes-list)
+                           zk-index-last-format-function
+                           zk-index-last-sort-function
+                           zk-index-current-notes-buffer-name)))))
+
 (defun zk-index-current-notes ()
   "Open ZK-Index listing currently open notes."
   (interactive)
-  (zk-index (zk--current-notes-list)
-            zk-index-last-format-function
-            zk-index-last-sort-function))
+  (let ((current-notes (zk--current-notes-list)))
+    (if (not current-notes)
+        (message "No currently open notes to list")
+      (zk-index current-notes
+                zk-index-last-format-function
+                zk-index-last-sort-function
+                zk-index-current-notes-buffer-name)
+      (use-local-map (copy-keymap zk-index-mode-map))
+      (local-set-key "k" #'zk-index-kill-visiting-buffer)
+      (message "Use `k' to kill the note's visiting buffer"))))
 
 (defun zk-index--button-at-point (&optional pos)
   "Return zk-id when `zk-index' button is at point.
