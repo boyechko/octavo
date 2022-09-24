@@ -437,12 +437,14 @@ file-paths."
              (buffer-file-name x)))
          (buffer-list))))
 
-(defun zk--grep-file-list (str &optional extended)
-  "Return a list of files containing regexp STR.
-If EXTENDED is non-nil, run the egrep command instead of grep."
+(defun zk--grep-file-list (str &optional extended invert)
+  "Return a list of files containing regexp STR. If EXTENDED is
+non-nil, run the egrep command instead of grep. If INVERT is non-nil,
+list files NOT matching the regexp."
   (let* ((files (shell-command-to-string
                  (concat (if extended "egrep" "grep")
-                         " -lir --include \\*."
+                         (if invert " -L " " -l")
+                         " -ir --include \\*."
                          zk-file-extension
                          " -e "
                          (shell-quote-argument

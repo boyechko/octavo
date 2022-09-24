@@ -446,11 +446,13 @@ title (like those used `zk--alist')."
 ;;;; Index Search
 ;; narrow index based on search of notes' full text
 
-(defun zk-index-search (regexp)
-  "Narrow index based on REGEXP search of note contents."
-  (interactive (list (read-string "Search: " nil 'zk-search-history)))
+(defun zk-index-search (regexp &optional arg)
+  "Narrow index based on REGEXP search of note contents. With
+\\[universal-argument], list titles NOT matching."
+  (interactive (list (read-string "Search: " nil 'zk-search-history)
+                     current-prefix-arg))
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh (zk-index-query-files 'search regexp)
+      (zk-index-refresh (zk-index-query-files 'search regexp (equal arg '(4)))
                         zk-index-last-format-function
                         zk-index-last-sort-function
                         (buffer-name))
@@ -460,11 +462,13 @@ title (like those used `zk--alist')."
 ;; narrow index based on search of note titles (case sensitive)
 ;; an alternative to consult-focus-lines
 
-(defun zk-index-focus (regexp)
-  "Narrow index based on REGEXP search of note titles."
-  (interactive (list (read-string "Focus: " nil 'zk-search-history)))
+(defun zk-index-focus (regexp &optional arg)
+  "Narrow index based on REGEXP search of note titles. With
+\\[universal-argument], list titles NOT matching."
+  (interactive (list (read-string "Focus: " nil 'zk-search-history)
+                     current-prefix-arg))
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh (zk-index-query-files 'focus regexp)
+      (zk-index-refresh (zk-index-query-files 'focus regexp (equal arg '(4)))
                         zk-index-last-format-function
                         zk-index-last-sort-function
                         (buffer-name))
@@ -507,24 +511,21 @@ insert the STRING into the query directly."
                                       ".*")
                               zk-header-title-line-regexp))))
 
-(defun zk-index-query-files (type regexp)
+(defun zk-index-query-files (type regexp &optional invert)
   "Return narrowed list of notes after the given TYPE (either 'focus
-or 'search) of query matching matching REGEXP."
-  (let* ((query (pcase type
-                 ('focus
-                  (zk--grep-file-list
-                   (zk-index--construct-title-line-regexp regexp) t))
-                 ('search
-                  (zk--grep-file-list regexp))
-                 (_
-                  (error "Unknown query type %s" type))))
-         (scope (zk-index--current-id-list (buffer-name)))
-         (files (cl-remove-if-not
-                 (lambda (file)
-                   (cl-find (zk--parse-file 'id file)
-                            scope
-                            :test #'string=))
-                 query)))
+or 'search) of query matching matching REGEXP. If INVERT is non-nil,
+list files NOT matching."
+  (let* ((files (pcase type
+                  ('focus
+                   (zk--grep-file-list
+                    (zk-index--construct-title-line-regexp regexp) t invert))
+                  ('search
+                   (cl-intersection
+                    (zk-index--current-file-list (buffer-name))
+                    (zk--grep-file-list
+                     (string-replace " " ".*" regexp) t invert)))
+                  (_
+                   (error "Unknown query type %s" type)))))
     (add-to-history 'zk-search-history regexp)
     (when files
       (let ((mode-line (zk-index-query-mode-line type regexp)))
