@@ -383,11 +383,11 @@ Optional search for regexp STR in file name, case-insenstive."
   (let ((case-fold-search t)
         ids)
     (dolist (file files ids)
-      (when (and (string-match (zk--file-name-regexp t)
-                               (file-name-nondirectory file))
-                 (or (not str)
-                     (and str (match-string 2 file))))
-        (push (match-string 1 file) ids)))))
+      (let ((file (file-name-nondirectory file)))
+        (when (and (string-match (zk--file-name-regexp t) file)
+                   (or (not str)
+                       (and str (string-match-p str (match-string 2 file)))))
+          (push (match-string 1 file) ids))))))
 
 (defun zk--id-unavailable-p (str)
   "Return t if provided string STR is already in use as an id."
