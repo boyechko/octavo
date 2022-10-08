@@ -464,10 +464,14 @@ window."
   (interactive (list (read-string "Search: " nil 'zk-search-history)
                      current-prefix-arg))
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh (zk-index-query-files 'search regexp (equal arg '(4)))
-                        zk-index-last-format-function
-                        zk-index-last-sort-function
-                        (buffer-name))
+      (let ((files (zk-index--current-file-list (buffer-name))))
+        (zk-index-refresh (zk-index-query-files 'search
+                                                files
+                                                regexp
+                                                (equal arg '(4)))
+                          zk-index-last-format-function
+                          zk-index-last-sort-function
+                          (buffer-name)))
     (user-error "Not in a ZK-Index")))
 
 ;;;; Index Focus
@@ -480,10 +484,14 @@ window."
   (interactive (list (read-string "Focus: " nil 'zk-search-history)
                      current-prefix-arg))
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh (zk-index-query-files 'focus regexp (equal arg '(4)))
-                        zk-index-last-format-function
-                        zk-index-last-sort-function
-                        (buffer-name))
+      (let ((files (zk-index--current-file-list (buffer-name))))
+       (zk-index-refresh (zk-index-query-files 'focus
+                                               files
+                                               regexp
+                                               (equal arg '(4)))
+                         zk-index-last-format-function
+                         zk-index-last-sort-function
+                         (buffer-name)))
     (user-error "Not in a ZK-Index")))
 
 ;;;; Low-level Query Functions
@@ -523,30 +531,32 @@ insert the STRING into the query directly."
                                       ".*")
                               zk-header-title-line-regexp))))
 
-(defun zk-index-query-files (type regexp &optional invert)
-  "Return narrowed list of notes after the given TYPE (either 'focus
-or 'search) of query matching matching REGEXP. If INVERT is non-nil,
-list files NOT matching."
-  (let* ((files (pcase type
-                  ('focus
-                   (zk--grep-file-list
-                    (zk-index--construct-title-line-regexp regexp) t invert))
-                  ('search
-                   (cl-intersection
-                    (zk-index--current-file-list (buffer-name))
-                    (zk--grep-file-list
-                     (string-replace " " ".*" regexp) t invert)))
-                  (_
-                   (error "Unknown query type %s" type)))))
+(defun zk-index-query-files (type files regexp &optional invert)
+  "Return narrowed list of FILES after the given TYPE (either 'focus
+or 'search) of query matching REGEXP. If INVERT is non-nil, return files
+NOT matching."
+  (let ((matching (pcase type
+                    ('focus
+                     (zk--grep-file-list
+                      (zk-index--construct-title-line-regexp regexp) t invert))
+                    ('search
+                     (cl-intersection
+                      files
+                      (zk--grep-file-list
+                       (string-replace " " ".*" regexp) t invert)
+                      :key #'file-name-base
+                      :test #'string=))
+                    (_
+                     (error "Unknown query type %s" type)))))
     (add-to-history 'zk-search-history regexp)
-    (when files
-      (let ((mode-line (zk-index-query-mode-line type regexp)))
-        (setq zk-index-query-mode-line mode-line)
-        (zk-index--set-mode-line mode-line)
-        (zk-index--reset-mode-name)))
-    (unless files
-      (message "No matches for \"%s\"" regexp))
-    files))
+    (if matching
+        (let ((mode-line (zk-index-query-mode-line type regexp)))
+          (setq zk-index-query-mode-line mode-line)
+          (zk-index--set-mode-line mode-line)
+          (zk-index--reset-mode-name)
+          matching)
+      (message "No matches for \"%s\"" regexp)
+      files)))
 
 (defun zk-index-query-refresh ()
   "Refresh narrowed index, based on last focus or search query."
