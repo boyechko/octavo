@@ -314,11 +314,12 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
           (setq zk-index-last-sort-function nil))
         (erase-buffer)
         (dolist (file files)
-          (zk-index--insert-button file format-fn)
-          (setq n (1+ n))
-          (insert "\n"))
+          (when-let ((button (zk-index--insert-button file format-fn)))
+            (setq n (1+ n))
+            (insert "\n")))
         ;; Delete the extraneous newline at the end of the buffer.
-        (backward-delete-char 1)
+        (let ((delete-active-region nil))
+          (backward-delete-char 1))
         (zk-index--reset-mode-name)
         (zk-index--set-mode-name (format " [%s]" n))
         (goto-char (point-min))
@@ -365,9 +366,10 @@ title (like those used `zk--alist')."
     (let ((beg (point))
           (id (zk--parse-file 'id file))
           (title (zk--parse-file 'title file)))
-      (insert zk-index-prefix
-              (funcall (or format-fn zk-index-format-function) id title))
-      (zk-index--make-button beg (point-at-eol) file id title))))
+      (when (and id title)
+        (insert zk-index-prefix
+                (funcall (or format-fn zk-index-format-function) id title))
+        (zk-index--make-button beg (point-at-eol) file id title)))))
 
 ;;;###autoload
 (defun zk-index-make-buttons ()
