@@ -399,7 +399,9 @@ title (like those used `zk--alist')."
 ;;;; Utilities
 
 (defun zk-index-button-display-action (file buffer)
-  "Function to display FILE or BUFFER on button press in Index and Desktop."
+  "Function to display FILE or BUFFER on button press in Index and
+Desktop. With \\[universal-argument], display the file in the other
+window."
   (if (and zk-index-desktop-directory
 	       (file-in-directory-p zk-index-desktop-directory
 				                default-directory))
@@ -411,7 +413,9 @@ title (like those used `zk--alist')."
                             buffer
                             '((direction . bottom)
                               (window-height . 0.5))))
-          (find-file-other-window file)))
+          (if current-prefix-arg
+              (find-file-other-window file)
+            (find-file file))))
     ;; display action for ZK-Index
     (if (one-window-p)
         (pop-to-buffer buffer
@@ -419,7 +423,9 @@ title (like those used `zk--alist')."
                         buffer
                         '((direction . top)
                           (window-height . 0.6))))
-      (find-file-other-window file))))
+      (if current-prefix-arg
+          (find-file-other-window file)
+        (find-file file)))))
 
 (defun zk-index-button-action (button)
   "Action taken when `zk-index' button is pressed."
