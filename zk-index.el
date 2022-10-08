@@ -273,14 +273,15 @@ will be used by default."
 
 ;;;###autoload
 (defun zk-index (&optional files format-fn sort-fn buf-name)
-  "Open ZK-Index, with optional FILES, FORMAT-FN, SORT-FN, BUF-NAME."
+  "Open ZK-Index, with optional FILES, FORMAT-FN, SORT-FN, BUF-NAME.
+Returns the name of the created buffer."
   (interactive)
   (setq zk-index-last-format-function format-fn)
   (setq zk-index-last-sort-function sort-fn)
-  (let ((inhibit-message nil)
-        (inhibit-read-only t)
-        (buf-name (or buf-name zk-index-buffer-name))
-        (files (or files (zk--directory-files t))))
+  (let* ((inhibit-message nil)
+         (inhibit-read-only t)
+         (buf-name (or buf-name zk-index-buffer-name))
+         (files (or files (zk--directory-files t))))
     (unless (get-buffer buf-name)
       (when zk-default-backlink
         (unless (zk-file-p)
@@ -295,16 +296,18 @@ will be used by default."
       (goto-char (point-min)))
     (unless (string= buf-name (buffer-name))
       (pop-to-buffer buf-name
-                     '(display-buffer-at-bottom)))))
+                     '(display-buffer-at-bottom)))
+    buf-name))
 
 (defun zk-index-refresh (&optional files format-fn sort-fn buf-name)
-  "Refresh the index.
+  "Refresh the index, returning its buffer name.
 Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   (interactive)
   (let ((inhibit-message nil)
         (inhibit-read-only t)
+        (buf-name (or buf-name zk-index-buffer-name))
         (files (zk-index--sort (or files (zk--directory-files)) sort-fn)))
-    (with-current-buffer (or buf-name zk-index-buffer-name)
+    (with-current-buffer buf-name
       (let ((current-line (line-number-at-pos))
             (n 0))
         (unless sort-fn
@@ -322,7 +325,8 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
         (setq truncate-lines t)
         (unless (zk-index-narrowed-p buf-name)
           (zk-index--reset-mode-line)
-          (forward-line current-line))))))
+          (forward-line current-line))))
+    buf-name))
 
 (defun zk-index--sort (files &optional sort-fn)
   "Sort FILES (destructively) with SORT-FN.
