@@ -233,6 +233,11 @@ replaced by a note's ID."
   "Returns regexp for zk-link based on `zk-link-format' and `zk-id-regexp'."
   '(format (regexp-quote zk-link-format) zk-id-regexp))
 
+(defcustom zk-format-link-and-title-function #'zk--format-link-and-title
+  "A function of two arguments, ID and TITLE, which should return a
+formatted string describing a link to ID. The default function can be
+customized with `zk-link-and-title-format'.")
+
 (defcustom zk-link-and-title t
   "Should `zk-insert-link' insert both link and title?
 
@@ -250,8 +255,8 @@ by setting the variable `zk-link-and-title-format'."
 (defcustom zk-link-and-title-format "%t [[%i]]"
   "Format for link and title when inserted to together.
 
-The string `%t' will be replaced by the note's title and `%i'
-will be replaced by its ID."
+The string `%t' will be replaced by the note's title and `%i' will be
+replaced by its ID."
   :type 'string)
 
 (defcustom zk-default-backlink nil
@@ -883,10 +888,15 @@ configurations."
   (when zk-enable-link-buttons
     (zk-make-button-before-point)))
 
+(defun zk--format-link-and-title (id title)
+  "Given ID and TITLE, returns a formatted string according to the values of
+`zk-link-and-title-format'."
+  (format-spec zk-link-and-title-format
+               `((?i . ,id) (?t . ,title))))
+
 (defun zk--insert-link-and-title (id title)
   "Insert zk ID and TITLE according to `zk-link-and-title-format'."
-  (insert (format-spec zk-link-and-title-format
-                       `((?i . ,id) (?t . ,title))))
+  (insert (funcall zk-format-link-and-title-function id title))
   (when zk-enable-link-buttons
     (zk-make-button-before-point)))
 
@@ -955,8 +965,7 @@ brackets \"[[\" initiates completion."
          (title (zk--parse-id 'title id)))
     (if id
         (progn
-          (kill-new (format-spec zk-link-and-title-format
-                                 `((?i . ,id)(?t . ,title))))
+          (kill-new (funcall zk-format-link-and-title-function id title))
           (message "Link and title copied: %s" title))
       (error "No valid zk-id"))))
 
