@@ -562,11 +562,12 @@ NOT matching."
   "Refresh narrowed index, based on last focus or search query."
   (interactive)
   (let ((mode mode-name)
-        (files (zk-index--current-file-list)))
+        (files (zk-index--current-file-list (buffer-name))))
     (unless (stringp files)
       (zk-index-refresh files
                         nil
-                        zk-index-last-sort-function)
+                        zk-index-last-sort-function
+                        (buffer-name))
       (setq mode-name mode))))
 
 (defun zk-index-query-mode-line (query-type string)
@@ -629,17 +630,28 @@ the list to just to that region."
          (forward-line))))
     buttons))
 
-(defun zk-index--current-id-list (buf-name)
-  "Return list of IDs for index in BUF-NAME, as filepaths."
-  (let (ids)
-    (save-excursion
-      (with-current-buffer (or buf-name
-                               zk-index-buffer-name)
-        (goto-char (point-min))
-        (save-match-data
-          (while (re-search-forward (concat "^" zk-id-regexp) nil t)
-            (push (match-string-no-properties 0) ids)))
-        ids))))
+(defmacro zk-index--current-id-list (&optional buf-name)
+  "Return list of IDs for index in BUF-NAME (or `zk-index-buffer-name'
+if not given)."
+  (let ((button (gensym "button")))
+    `(mapcar (lambda (,button)
+               (zk--triplet-id (button-get ,button 'zk-triplet)))
+             (zk-index--current-button-list
+              (or ,buf-name ,zk-index-buffer-name)))))
+
+(defun zk-index--current-file-list (&optional buf-name regexp)
+  "Return list of files for Zk index in BUF-NAME (or
+`zk-index-buffer-name' if not given). If REGEXP is given, only return
+files matching it."
+  (delq nil
+        (mapcar (lambda (button)
+                  (let ((file (zk--triplet-file
+                               (button-get button 'zk-triplet))))
+                    (when (or (null regexp)
+                              (string-match regexp file))
+                      file)))
+                (zk-index--current-button-list
+                 (or buf-name zk-index-buffer-name)))))
 
 ;;; Index Sort Functions
 
@@ -648,7 +660,7 @@ the list to just to that region."
 MODE-SUFFIX to the mode name."
   `(if (not (eq major-mode 'zk-index-mode))
        (user-error "Not in a ZK-Index")
-     (zk-index-refresh (zk-index--current-file-list)
+     (zk-index-refresh (zk-index--current-file-list (buffer-name))
                        zk-index-last-format-function
                        ,sort-fn
                        (buffer-name))
@@ -677,11 +689,6 @@ MODE-SUFFIX to the mode name."
 (defun zk-index--reset-mode-name ()
   "Reset `mode-name' in `zk-index-mode'."
   (setq mode-name "ZK-Index"))
-
-(defun zk-index--current-file-list ()
-  "Return list files in current index."
-  (let ((ids (zk-index--current-id-list (buffer-name))))
-    (zk--parse-ids 'file-path ids)))
 
 (defun zk-index--sort-internal (files predicate key-fn)
   "Sort FILES with PREDICATE, a function of two arguments, that returns non-nil
