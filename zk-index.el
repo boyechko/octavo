@@ -743,8 +743,9 @@ If DESCENDING is non-nil, sort in descending order."
   (beginning-of-line)
   (push-button nil t))
 
-;; TODO: What is this variable for?
-(defvar-local zk-index-view--kill nil)
+(defvar-local zk-index-view--kill nil
+  "If T, `zk-index-next-line' and `zk-index-previous-line' will kill
+the current buffer before moving on.")
 
 (defun zk-index-view-note ()
   "View note in `zk-index-view-mode'."
@@ -754,8 +755,8 @@ If DESCENDING is non-nil, sort in descending order."
                (button-get (button-at (point)) 'zk-triplet))))
     (if (not file)
         (error "Cannot view this note")
+      (push-button nil t)
       (with-current-buffer (get-file-buffer file)
-        (push-button nil t)
         (setq-local zk-index-view--kill t)
         (zk-index-view-mode)))))
 
