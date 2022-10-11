@@ -614,6 +614,21 @@ QUERY-TYPE is either 'focus or 'search, with query term STRING."
   (setq zk-index-query-mode-line nil
         zk-index-query-terms nil))
 
+(defun zk-index--current-button-list (&optional buf-name beg end)
+  "Return list of zk-index buttons for the index in BUF-NAME (or
+`zk-index-buffer-name' if not given). If BEG or END are given, limit
+the list to just to that region."
+  (let (button buttons)
+    (save-excursion
+     (with-current-buffer (or buf-name zk-index-buffer-name)
+       (goto-char (or beg (point-min)))
+       (while (and (< (point) (or end (point-max)))
+                   (setq button (button-at (point)))
+                   (eql (button-type button) 'zk-index))
+         (push button buttons)
+         (forward-line))))
+    buttons))
+
 (defun zk-index--current-id-list (buf-name)
   "Return list of IDs for index in BUF-NAME, as filepaths."
   (let (ids)
