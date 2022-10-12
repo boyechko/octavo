@@ -651,28 +651,26 @@ Adds `zk-make-link-buttons' to `find-file-hook.'"
   (define-button-type 'zk-link
     'action 'zk-follow-link-at-point
     'follow-link t
-    'help-echo (lambda (_win _obj pos)
-                 (format
-                  "%s"
-                  (zk--parse-id
-                   'title
-                   (button-label
-                    (button-at pos)))))))
+    'help-echo
+    (lambda (_win _obj pos)
+      (format "%s"
+              (zk--triplet-title (button-get (button-at pos) 'zk-triplet))))))
 
 (defun zk-make-link-buttons ()
   "Make `zk-link-regexp's in current buffer into zk-link buttons."
   (interactive)
-  (when (and (zk-file-p)
-             zk-enable-link-buttons)
-    (let ((ids (zk--id-list)))
+  (when (zk-file-p)
+    (let ((triplets (zk--alist (zk--directory-files))))
       (save-excursion
         (goto-char (point-min))
         (while (re-search-forward (zk-link-regexp) nil t)
           (let ((beg (match-beginning 1))
                 (end (match-end 1))
                 (id (match-string-no-properties 1)))
-            (when (member id ids)
-              (make-button beg end 'type 'zk-link))))))))
+            (when id
+              (make-button beg end
+                           'type 'zk-link
+                           'zk-triplet (assoc-string id triplets)))))))))
 
 (defun zk-make-button-before-point ()
   "Find `zk-link-regexp' before point and make it a zk-link button."
