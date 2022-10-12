@@ -585,7 +585,8 @@ Group 1 is the zk ID.
 Group 2 is the title."
   `(concat "^"
            "\\(?1:" zk-id-regexp "\\)"
-           (unless zk-file-name-id-only
+           (if zk-file-name-id-only
+               "\\(?2:\\)"              ; empty \2
              (concat zk-file-name-separator
                      "\\(?2:[^.]*?\\)"))
            ,@(when with-extension
