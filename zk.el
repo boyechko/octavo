@@ -837,7 +837,7 @@ Optionally call a custom function by setting the variable
 
 (defun zk--links-in-note-list ()
   "Return list of zk files that are linked from the current buffer."
-  (let ((zk-ids (zk--id-list))
+  (let ((zk-ids (zk--id-list (zk--directory-files)))
         id-list)
     (save-buffer)
     (save-excursion
