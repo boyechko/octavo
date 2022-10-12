@@ -527,7 +527,7 @@ FILES."
                            (zk--parse-file 'title file))))
           files))
 
-(defun zk--parse-id (target id &optional zk-alist)
+(defun zk--parse-id (target id &optional zk-alist noerror)
   "Return TARGET, either 'file-path or 'title, for the given ID. If
 ZK-ALIST is non-nil, retrieve based on information there. Otherwise,
 try to get the information from the (hypothetical) file name. If
@@ -541,23 +541,24 @@ NOERROR is non-nil, don't raise errors, just return nil."
         ('file-path file-path)
         ('title (or (match-string 2 file-path)
                     (zk--parse-file 'title file-path)))
-        (_ (error "Unknown target %s" target)))
+        (_ (unless noerror (error "Unknown target %s" target))))
     (let ((item (assoc id zk-alist #'string=)))
       (if item
           (pcase target
             ('file-path (zk--triplet-file item))
             ('title (zk--triplet-title item))
-            (_ (error "Unknown target %s" target)))
-        (error "No such ID in zk-alist: %s" id)))))
+            (_ (unless noerror (error "Unknown target %s" target))))
+        (unless noerror (error "No such ID in zk-alist: %s" id))))))
 
-(defun zk--parse-ids (target ids &optional zk-alist)
+(defun zk--parse-ids (target ids &optional zk-alist noerror)
   "Return TARGET, either `file-path or `title, from files with IDS.
 Takes a single ID, as a string, or a list of IDs. Takes an optional
-ZK-ALIST for efficiency."
+ZK-ALIST for efficiency. If NOERROR is non-nil, don't raise errors."
   (let* ((zk-alist (or zk-alist (zk--alist (zk--directory-files)))))
-    (mapcar (lambda (id)
-              (zk--parse-id target id zk-alist))
-            ids)))
+    (remq nil
+          (mapcar (lambda (id)
+                    (zk--parse-id target id zk-alist noerror))
+                  ids))))
 
 (defun zk--parse-file (target file-or-files)
   "Return TARGET, either `id or `title, from FILE-OR-FILES.
