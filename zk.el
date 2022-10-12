@@ -824,13 +824,15 @@ Optionally call a custom function by setting the variable
 ;;; Follow Links
 
 ;;;###autoload
-(defun zk-follow-link-at-point (&optional id)
-  "Open note that corresponds with the zk ID at point."
-  (interactive)
+(defun zk-follow-link-at-point (&optional id arg)
+  "Open note that corresponds with the zk ID at point. With
+\\[universal-argument], open it in the other window."
+  (interactive (list nil current-prefix-arg))
   (let ((id (or (zk--id-at-point)
                 id)))
     (if id
-        (find-file (zk--parse-id 'file-path id))
+        (funcall (if arg #'find-file-other-window #'find-file)
+                 (zk--parse-id 'file-path id))
       (error "No zk-link at point"))))
 
 (defun zk--links-in-note-list ()
