@@ -363,17 +363,17 @@ The ID is created using `zk-id-time-string-format'."
     id))
 
 (defun zk--new-file-path (id title)
-  "Generate file-path for new note.
-Takes an ID and TITLE and returns a full file path, based on values of
-`zk-directory', `zk-directory-subdir-function', `zk-file-name-separator', and
-`zk-file-extension'. If no TITLE is supplied, the file name will consist of
-ID only."
+  "Generate file-path for new note. Takes an ID and TITLE and returns
+a full file path, based on values of `zk-directory',
+`zk-directory-subdir-function', `zk-file-name-separator', and
+`zk-file-extension'. If no TITLE is supplied, the file name will
+consist of ID only."
   (let ((file-name
          (string-replace " "
                          zk-file-name-separator
                          (format "%s%s.%s"
                                  id
-                                 (if title
+                                 (if (and title (not (string-empty-p title)))
                                      (concat zk-file-name-separator title)
                                    "")
                                  zk-file-extension))))
@@ -530,12 +530,13 @@ FILES."
 (defun zk--parse-id (target id &optional zk-alist)
   "Return TARGET, either 'file-path or 'title, for the given ID. If
 ZK-ALIST is non-nil, retrieve based on information there. Otherwise,
-try to get the information from the (hypothetical) file name."
-  (if-let ((file-path
-            (and (null zk-alist)
-                 (string-match (zk--file-name-regexp t)
-                               (file-name-nondirectory
-                                (zk--new-file-path id (match-string 2)))))))
+try to get the information from the (hypothetical) file name. If
+NOERROR is non-nil, don't raise errors, just return nil."
+  (if-let* ((wild-path (car (file-expand-wildcards (zk--new-file-path id "*"))))
+            (expanded-path (file-name-nondirectory wild-path))
+            (file-path (and (null zk-alist)
+                            (string-match (zk--file-name-regexp t) expanded-path)
+                            (zk--new-file-path id (match-string 2 expanded-path)))))
       (pcase target
         ('file-path file-path)
         ('title (or (match-string 2 file-path)
