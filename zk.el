@@ -599,17 +599,18 @@ A note's title is understood to be the portion of its filename
 following the zk ID, in the format `zk-id-regexp', and preceding
 the file extension. This is the default value of
 `zk-parse-file-function'."
-  (when (string-match (zk--file-name-regexp t)
-                      (file-name-nondirectory file))
-    (pcase target
-      ('id    (match-string 1 file))
-      ('title (unless (string-empty-p (match-string 2 file))
-                (string-replace zk-file-name-separator
-                                " "
-                                (match-string 2 file))))
-      (_ (signal 'wrong-type-argument `((and symbolp
-                                             (or id title))
-                                        ,target))))))
+  ;; Match only against the file name itself to avoid mis-matching.
+  (let ((file (file-name-nondirectory file)))
+    (when (string-match (zk--file-name-regexp t) file)
+      (pcase target
+        ('id    (match-string 1 file))
+        ('title (unless (string-empty-p (match-string 2 file))
+                  (string-replace zk-file-name-separator
+                                  " "
+                                  (match-string 2 file))))
+        (_ (signal 'wrong-type-argument `((and symbolp
+                                               (or id title))
+                                          ,target)))))))
 
 (defun zk--file-header (file)
   "Return an list of (key . value) pairs comprising the FILE's header as
