@@ -342,8 +342,7 @@ data."
                     (t
                      (signal 'wrong-type-argument '(file))))))
     (and file
-         (string-match (zk-file-name-regexp)
-                       (file-name-nondirectory file))
+         (string-match (zk-file-name-regexp) file)
          (or (not strict)
              (file-in-directory-p file zk-directory)))))
 
@@ -355,7 +354,9 @@ data."
 (defun zk-file-title (file)
   "Return the title of the given FILE."
   (when (string-match (zk-file-name-regexp) file)
-    (match-string 2 file)))
+    (string-replace zk-file-name-separator
+                    " "
+                    (match-string 2 file))))
 
 (defmacro zk--triplet (file id title)
   "Returns a triplet suitable as element of `zk--alist', with the order
@@ -410,11 +411,12 @@ Optional search for regexp STR in file name, case-insenstive."
   (let ((case-fold-search t)
         ids)
     (dolist (file files ids)
-      (let ((file (file-name-nondirectory file)))
-        (when (and (string-match (zk-file-name-regexp) file)
-                   (or (not str)
-                       (and str (string-match-p str (match-string 2 file)))))
-          (push (match-string 1 file) ids))))))
+      (when-let ((id (zk-file-id file))
+                 (_ (or (not str)
+                        (and str (string-match-p
+                                  str
+                                  (zk-file-title file))))))
+        (push id ids)))))
 
 (defun zk--id-unavailable-p (str)
   "Return t if provided string STR is already in use as an id."
@@ -422,9 +424,8 @@ Optional search for regexp STR in file name, case-insenstive."
 
 (defun zk--current-id ()
   "Return id of the zk note in the current buffer."
-  (if (zk-file-p buffer-file-name)
-      (match-string 0 buffer-file-name)
-    (user-error "Not a zk file")))
+  (or (zk-file-id buffer-file-name)
+      (user-error "Not a zk file")))
 
 (defun zk--directory-files (&optional full regexp)
   "Return list of zk-files in `zk-directory'.
@@ -602,22 +603,16 @@ A note's title is understood to be the portion of its filename
 following the zk ID, in the format `zk-id-regexp', and preceding
 the file extension. This is the default value of
 `zk-parse-file-function'."
-  ;; Match only against the file name itself to avoid mis-matching.
-  (let ((file (file-name-nondirectory file)))
-    (when (string-match (zk-file-name-regexp) file)
-      (pcase target
-        ('id    (match-string 1 file))
-        ('title (unless (string-empty-p (match-string 2 file))
-                  (string-replace zk-file-name-separator
-                                  " "
-                                  (match-string 2 file))))
-        (_ (signal 'wrong-type-argument `((and symbolp
-                                               (or id title))
-                                          ,target)))))))
+  (pcase target
+    ('id    (zk-file-id file))
+    ('title (zk-file-title file))
+    (_ (signal 'wrong-type-argument `((and symbolp
+                                           (or id title))
+                                      ,target)))))
 
 (defun zk--file-header (file)
-  "Return an list of (key . value) pairs comprising the FILE's header as
-defined by `zk-header-line-regexp'."
+  "Return an list of (key . value) pairs comprising the FILE's header.
+See also `zk-header-line-regexp'."
   (let (alist)
     (with-temp-buffer
       (insert-file-contents file)
@@ -630,17 +625,17 @@ defined by `zk-header-line-regexp'."
   "Return TARGET, either 'id or 'title, from the given FILE.
 Unlike `zk-parse-file-name', attempt to get the note title
 from the file header."
-  (when (string-match (zk-file-name-regexp)
-                      (file-name-nondirectory file))
-    (let ((id (match-string 1 (file-name-nondirectory file))))
-      (if (eql target 'id)
-          id
-        (ignore-errors
-          (with-temp-buffer
-            (insert-file-contents file)
-            (goto-char (point-min))
-            (when (re-search-forward zk-header-title-line-regexp nil t)
-              (match-string-no-properties 2))))))))
+  (pcase target
+    ('id    (zk-file-id file))
+    ('title (ignore-errors
+              (with-temp-buffer
+                (insert-file-contents file)
+                (goto-char (point-min))
+                (when (re-search-forward zk-header-title-line-regexp nil t)
+                  (match-string-no-properties 2)))))
+    (_ (signal 'wrong-type-argument `((and symbolp
+                                           (or id title))
+                                      ,target)))))
 
 ;;; Buttons
 
