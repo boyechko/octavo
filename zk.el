@@ -448,10 +448,8 @@ file-paths."
                      dir)))))))
     (remq nil (mapcar
                (lambda (x)
-                 (when (and (zk-file-p x)
-                            (not (string-match-p
-                                  "^[.]\\|[#|~]$"
-                                  (file-name-nondirectory x))))
+                 (unless (or (string-match-p "^[.]\\|[#|~]$" x)
+                             (not (zk-file-p x)))
                    x))
                list))))
 
