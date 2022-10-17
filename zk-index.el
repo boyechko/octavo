@@ -254,6 +254,32 @@ Adds zk-id as an Embark target, and adds `zk-id-map' and
 
 ;;; Formatting
 
+(defun zk-index--format-candidates (&optional files format)
+  "Return a list of FILES as formatted candidates, following FORMAT.
+
+FORMAT must be a `format-spec' template, wherein `%i' is replaced
+by the ID and `%t' by the title. It can be a string, such as \"%t
+[[%i]]\", or a variable whose value is a string. If nil,
+`zk-completion-at-point-format' will be used by default.
+
+FILES must be a list of filepaths. If nil, all files in
+`zk-directory' will be returned as formatted candidates."
+  (let* ((zk-index-format (if zk-index-invisible-ids
+                              "%t %i"
+                            zk-index-format))
+         (format (or format zk-index-format))
+         (list (or files (zk--directory-files)))
+         (output))
+    (dolist (file list output)
+      (let ((id (if zk-index-invisible-ids
+                    (propertize (zk--parse-file 'id file) 'invisible t)
+                  (zk--parse-file 'id file)))
+            (title (zk--parse-file 'title file)))
+        (when id
+          (push (format-spec format
+                             `((?i . ,id) (?t . ,title)))
+                output))))))
+
 (defun zk-index--format-line (id title &optional format)
   "Return a formatted string, following FORMAT, for the given ID and TITLE.
 
@@ -1038,18 +1064,17 @@ even if `zk-index-desktop-current' is set."
     (cond ((eq 1 (length files))
            (unless
                (ignore-errors
-                 (setq items (car (funcall zk-index-format-function files))))
+                 (setq items (car (zk-index--format-candidates files))))
              (setq items
-                   (car
-                    (funcall
-                     zk-index-format-function
-                     (list (zk--parse-ids 'file-path files)))))))
+               (car
+                (zk-index--format-candidates
+                 (list (zk--parse-ids 'file-path files)))))))
           ((and files
                 (< 1 (length files)))
            (setq items
-                 (mapconcat
-                  #'identity
-                  (funcall zk-index-format-function files) "\n")))
+             (mapconcat
+                 #'identity
+               (zk-index--format-candidates files) "\n")))
           ((eq major-mode 'zk-index-mode)
            (setq items (if (use-region-p)
                            (buffer-substring
@@ -1064,10 +1089,9 @@ even if `zk-index-desktop-current' is set."
                           (line-end-position)))))
           ((zk-file-p)
            (setq items
-                 (car
-                  (funcall
-                   zk-index-format-function
-                   (list (zk--parse-id 'file-path (zk--current-id))))))))
+             (car
+              (zk-index--format-candidates
+               (list (zk--parse-id 'file-path (zk--current-id))))))))
     (unless (get-buffer desktop)
       (generate-new-buffer desktop))
     (with-current-buffer desktop
