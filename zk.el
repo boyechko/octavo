@@ -145,6 +145,22 @@ Set it so that it matches strings generated with
 `zk-id-format'."
   :type 'regexp)
 
+;; This needs to be a macro (or function) in order to evaluate `zk-id-regexp' at
+;; run time in case the user has changed that.
+(defun zk-file-name-regexp ()
+  "Return the correct regexp matching Zk file names.
+The regexp captures the following groups:
+
+Group 1 is the zk ID.
+Group 2 is the title."
+  (concat "^"
+          "\\(?1:" zk-id-regexp "\\)"
+          zk-file-name-separator
+          "?"
+          "\\(?2:[^.]*?\\)*"
+          "\\." zk-file-extension
+          "$"))
+
 (defcustom zk-tag-regexp "\\s#[a-zA-Z0-9]\\+"
   "The regular expression used to search for tags."
   :type 'regexp)
@@ -330,7 +346,7 @@ data."
                     (t
                      (signal 'wrong-type-argument '(file))))))
     (and file
-         (string-match (zk--file-name-regexp t)
+         (string-match (zk-file-name-regexp)
                        (file-name-nondirectory file))
          (or (not strict)
              (file-in-directory-p file zk-directory)))))
@@ -389,7 +405,7 @@ Optional search for regexp STR in file name, case-insenstive."
         ids)
     (dolist (file files ids)
       (let ((file (file-name-nondirectory file)))
-        (when (and (string-match (zk--file-name-regexp t) file)
+        (when (and (string-match (zk-file-name-regexp) file)
                    (or (not str)
                        (and str (string-match-p str (match-string 2 file)))))
           (push (match-string 1 file) ids))))))
@@ -535,7 +551,7 @@ NOERROR is non-nil, don't raise errors, just return nil."
   (if-let* ((wild-path (car (file-expand-wildcards (zk--new-file-path id "*"))))
             (expanded-path (file-name-nondirectory wild-path))
             (file-path (and (null zk-alist)
-                            (string-match (zk--file-name-regexp t) expanded-path)
+                            (string-match (zk-file-name-regexp) expanded-path)
                             (zk--new-file-path id (match-string 2 expanded-path)))))
       (pcase target
         ('file-path file-path)
@@ -574,25 +590,6 @@ On each file, call `zk-parse-file-function' and collect the results."
         (car result)
       result)))
 
-;; This needs to be a macro (or function) in order to evaluate `zk-id-regexp' at
-;; run time in case the user has changed that.
-(defmacro zk--file-name-regexp (&optional with-extension)
-  "Returns the full regexp matching zk note file names.
-If WITH-EXTENSION is given, include the period and `zk-file-extension',
-otherwise just match the base name.
-
-Group 1 is the zk ID.
-Group 2 is the title."
-  `(concat "^"
-           "\\(?1:" zk-id-regexp "\\)"
-           (if zk-file-name-id-only
-               "\\(?2:\\)"              ; empty \2
-             (concat zk-file-name-separator
-                     "\\(?2:[^.]*?\\)"))
-           ,@(when with-extension
-               '("\\." zk-file-extension))
-           "$"))
-
 (defun zk-parse-file-name (target file)
   "Return TARGET, either `id or `title, from the given FILE.
 A note's title is understood to be the portion of its filename
@@ -601,7 +598,7 @@ the file extension. This is the default value of
 `zk-parse-file-function'."
   ;; Match only against the file name itself to avoid mis-matching.
   (let ((file (file-name-nondirectory file)))
-    (when (string-match (zk--file-name-regexp t) file)
+    (when (string-match (zk-file-name-regexp) file)
       (pcase target
         ('id    (match-string 1 file))
         ('title (unless (string-empty-p (match-string 2 file))
@@ -627,7 +624,7 @@ defined by `zk-header-line-regexp'."
   "Return TARGET, either 'id or 'title, from the given FILE.
 Unlike `zk-parse-file-name', attempt to get the note title
 from the file header."
-  (when (string-match (zk--file-name-regexp t)
+  (when (string-match (zk-file-name-regexp)
                       (file-name-nondirectory file))
     (let ((id (match-string 1 (file-name-nondirectory file))))
       (if (eql target 'id)
