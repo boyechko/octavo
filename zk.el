@@ -145,19 +145,15 @@ Set it so that it matches strings generated with
 `zk-id-format'."
   :type 'regexp)
 
-;; This needs to be a macro (or function) in order to evaluate `zk-id-regexp' at
-;; run time in case the user has changed that.
 (defun zk-file-name-regexp ()
   "Return the correct regexp matching Zk file names.
 The regexp captures the following groups:
 
 Group 1 is the zk ID.
 Group 2 is the title."
-  (concat "^"
-          "\\(?1:" zk-id-regexp "\\)"
+  (concat "\\(?1:" zk-id-regexp "\\)"
           zk-file-name-separator
-          "?"
-          "\\(?2:[^.]*?\\)*"
+          "\\(?2:.*?\\)"
           "\\." zk-file-extension
           "$"))
 
