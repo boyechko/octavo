@@ -351,6 +351,16 @@ data."
          (or (not strict)
              (file-in-directory-p file zk-directory)))))
 
+(defun zk-file-id (file)
+  "Return the ID of the given FILE."
+  (when (string-match (zk-file-name-regexp) file)
+    (match-string 1 file)))
+
+(defun zk-file-title (file)
+  "Return the title of the given FILE."
+  (when (string-match (zk-file-name-regexp) file)
+    (match-string 2 file)))
+
 (defmacro zk--triplet (file id title)
   "Returns a triplet suitable as element of `zk--alist', with the order
 appropriate for the `zk--triplet-file', `zk--triplet-id', and
