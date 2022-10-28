@@ -823,7 +823,11 @@ for details about FORMAT."
 When added to `completion-at-point-functions', typing two
 brackets \"[[\" initiates completion."
   (let ((case-fold-search t)
-        (origin (point)))
+        (origin (point))
+        (candidates
+         (mapcar (lambda (f)
+                   (zk--format-candidate f zk-completion-at-point-format))
+                 (zk--directory-files))))
     (save-excursion
       (when (and (re-search-backward "\\[\\["
                                      (line-beginning-position)
@@ -834,7 +838,7 @@ brackets \"[[\" initiates completion."
               origin
               (completion-table-dynamic
                (lambda (_)
-                 (zk--format-candidates)))
+                 candidates))
               :exit-function
               (lambda (str _status)
                 (delete-char (- -2 (length str)))
