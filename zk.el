@@ -795,32 +795,27 @@ for additional configurations."
 
 ;;; Completion at Point
 
+(defun zk--format-candidate (file format)
+  "Format the zk FILE using FORMAT.
+FORMAT must be a `format-spec' template, wherein `%i' is replaced by the ID
+and `%t' by the title. It can be a string, such as \"%t [[%i]]\", or a
+variable whose value is a string."
+  (when (string-match (zk-file-name-regexp) file)
+    (let ((id (match-string 1 file))
+          (title (replace-regexp-in-string
+                  zk-file-name-separator
+                  " "
+                  (match-string 2 file))))
+      (format-spec format `((?i . ,id) (?t . ,title))))))
+
 (defun zk--format-candidates (&optional files format)
   "Return a list of FILES as formatted candidates, following FORMAT.
-
-FORMAT must be a `format-spec' template, wherein `%i' is replaced
-by the ID and `%t' by the title. It can be a string, such as \"%t
-[[%i]]\", or a variable whose value is a string. If nil,
-`zk-completion-at-point-format' will be used by default.
-
-FILES must be a list of filepaths. If nil, all files in
-`zk-directory' will be returned as formatted candidates."
-  (let* ((format (or format
-                     zk-completion-at-point-format))
-         (list (or files
-                   (zk--directory-files)))
-         (output))
-    (dolist (file list)
-      (progn
-        (string-match (zk-file-name-regexp) file)
-        (let ((id (match-string 1 file))
-              (title (replace-regexp-in-string zk-file-name-separator " "
-                                               (match-string 2 file))))
-          (when id
-            (push (format-spec format
-                               `((?i . ,id)(?t . ,title)))
-                  output)))))
-    output))
+FILES must be a list of filepaths. If nil, all files in `zk-directory'
+will be returned as formatted candidates. See `zk--format-candidate'
+for details about FORMAT."
+  (mapcar (lambda (f)
+            (zk--format-candidate f (or format zk-completion-at-point-format)))
+          (or files (zk--directory-files))))
 
 (defun zk-completion-at-point ()
   "Completion-at-point function for zk-links.
