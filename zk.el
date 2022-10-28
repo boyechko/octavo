@@ -816,6 +816,7 @@ for details about FORMAT."
   (mapcar (lambda (f)
             (zk--format-candidate f (or format zk-completion-at-point-format)))
           (or files (zk--directory-files))))
+(make-obsolete 'zk--format-candidates 'zk--format-candidate "0.5")
 
 (defun zk-completion-at-point ()
   "Completion-at-point function for zk-links.
