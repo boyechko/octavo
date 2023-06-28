@@ -39,13 +39,13 @@
 (custom-set-variables
  '(zk-file-extension "txt")
  '(zk-index-invisible-ids nil)
- '(zk-index-format "%t [[%i]]"))
+ '(zk-index-format "%t [[%i]]")
+ '(zk-directory-recursive t))
 
 (defvar __zk-environments
   '((:many-in-subdirs
      (zk-directory "~/Zk/many-in-subdirs")
-     (zk-id-regexp "\\([0-9]\\{12\\}\\)")
-     (zk-directory-recursive t))
+     (zk-id-regexp "\\([0-9]\\{12\\}\\)"))
     (:standard
      (zk-directory "~/Zk/standard")
      (zk-id-regexp "\\([0-9]\\{12\\}\\)")
@@ -54,14 +54,17 @@
      (zk-directory (file-name-concat (getenv "ZETTEL_DIR")
                                      (file-name-as-directory "numerus")))
      (zk-subdirectory-function #'ezeka-subdirectory)
-     (zk-id-regexp "\\([a-z]-[0-9]\\{4\\}\\)")
-     (zk-directory-recursive t))
+     (zk-id-regexp "\\([a-z]-[0-9]\\{4\\}\\)"))
     (:tempus
      (zk-directory (file-name-concat (getenv "ZETTEL_DIR")
                                      (file-name-as-directory "tempus")))
      (zk-subdirectory-function #'ezeka-subdirectory)
-     (zk-id-regexp "\\([0-9T]\\{13\\}\\)")
-     (zk-directory-recursive t)))
+     (zk-id-regexp "\\([0-9T]\\{13\\}\\)"))
+    (:scriptum
+     (zk-directory (file-name-concat (getenv "ZETTEL_DIR")
+                                     (file-name-as-directory "scriptum")))
+     (zk-subdirectory-function #'ezeka-subdirectory)
+     (zk-id-regexp "\\([a-z]-[0-9]\\{4\\}~[0-9][0-9]\\)")))
   "Description of my testing environments.
 Each item has the form of (:name varlist)")
 
@@ -71,7 +74,9 @@ Each item has the form of (:name varlist)")
     (:tempus
      "20220812T2046 Testing Zk with T filename.txt")
     (:numerus
-     "a-0000 {κ} Central Index.txt"))
+     "a-0000 {κ} Central Index.txt")
+    (:scriptum
+     "v-1268~73 {Review} _A Prehistory of the Cloud_ @Hu2015.txt"))
   "An alist of sample files relative to `zk-directory'.
 The form is (:ENVIRONMENT SAMPLE1 [... SAMPLEN]).")
 
