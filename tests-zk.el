@@ -339,15 +339,18 @@ Additional variables can be defined in VARLIST"
              (benchmark-run 100
                (zk--parse-id 'file-path "l-0614"))))))
 
-(ert-deftest tests-zk/bm/zk--parse-id ()
+(ert-deftest tests-zk/bm/zk--id-list ()
   :tags '(:benchmark)
-  ;;; 100 on :numerus with 3829 files (14.105008 24 2.713031)
+  ;; 100 on :numerus with 3829 files (14.105008 24 2.713031)
   (ert-run-tests-batch "tests-zk/__reload-zk")
   (garbage-collect)
-  (__with-zk-environment :numerus ()
-    (should (null
-             (benchmark-run 100
-               (zk--parse-id 'file-path "l-0614"))))))
+  (let (results)
+    (__with-zk-environment :numerus ()
+      (push (cons "(no args)" (benchmark-run 10 (zk--id-list))) results)
+      (push (cons "str" (benchmark-run 10 (zk--id-list "testing"))) results)
+      (push (cons "OLD: (no args)" (benchmark-run 10 (OLD_zk--id-list nil))) results)
+      (push (cons "OLD: str" (benchmark-run 10 (OLD_zk--id-list "testing"))) results))
+    (should-not (nreverse results))))
 
 (ert-deftest tests-zk/bm/zk--wildcard-file-path ()
   :tags '(:benchmark)
