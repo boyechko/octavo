@@ -107,6 +107,12 @@ Additional variables can be defined in VARLIST"
          ,@varlist)
      ,@body))
 
+(defun __set-zk-environment (env)
+  "Set the variables needed to work wiht environment ENV."
+  (interactive
+   (list (completing-read "Which environment? " __zk-environments)))
+  (apply #'custom-set-variables (alist-get (intern-soft env) __zk-environments)))
+
 (ert-deftest __with-zk-environment ()
   :tags '(:disabled)
   (__with-zk-environment :many-in-subdirs
