@@ -105,7 +105,7 @@ Additional variables can be defined in VARLIST"
          ,@varlist)
      ,@body))
 
-(ert-deftest tests-zk/__with-zk-environment ()
+(ert-deftest __with-zk-environment ()
   :tags '(:disabled)
   (__with-zk-environment :many-in-subdirs
     ((zk-subdirectory-function nil))
@@ -114,7 +114,7 @@ Additional variables can be defined in VARLIST"
     (should (string= (car (__zk-sample-files-for :standard))
                      "202206052002 {Event} WaterBear Film Screening Series at Minim.txt"))))
 
-(ert-deftest tests-zk/__reload-zk ()
+(ert-deftest __reload-zk ()
   (load-file (straight--repos-file "zk" "zk.el"))
   (load-file (straight--repos-file "zk" "zk-index.el")))
 
@@ -122,9 +122,9 @@ Additional variables can be defined in VARLIST"
 ;;; Actual Tests
 ;;;=============================================================================
 
-(ert-deftest tests-zk/zk--file-id ()
   :tags '(:disabled)                    ; after PR #46
   (__with-zk-environment :standard ()
+(ert-deftest zk--file-id ()
     (with-current-buffer "tests-zk.el"
       (should-not (zk--file-id buffer-file-name)))
     (let* ((file (car (__zk-sample-files-for :standard)))
@@ -133,7 +133,7 @@ Additional variables can be defined in VARLIST"
       (should (string= (zk--current-id) "202206052002")))))
 
 ;; FIXME: Update? Fix?
-(ert-deftest tests-zk/zk--format ()
+(ert-deftest zk--format ()
   (should
    (string= "a-1234 This is a title"
             (zk--format "%i %t" "a-1234" "This is a title")))
@@ -146,10 +146,10 @@ Additional variables can be defined in VARLIST"
     (should (string= "a-1234 --- This is a title"
              (zk--format "%s --- %s" "a-1234" "This is a title")))))
 
-(ert-deftest tests-zk/zk-link-regexp ()
+(ert-deftest zk-link-regexp ()
   (should (string= (zk-link-regexp) "\\[\\[\\([0-9]\\{12\\}\\)]]")))
 
-(ert-deftest tests-zk/zk--grep-file-list ()
+(ert-deftest zk--grep-file-list ()
   :tags '(:disabled)                    ; after PR #41
   (__with-zk-environment :standard ()
     (should (eq 144 (length (zk--grep-file-list " single "))))
@@ -159,7 +159,7 @@ Additional variables can be defined in VARLIST"
     (should (eq 180 (length (zk--grep-file-list " (single|double) " t))))
     (should (eq 2063 (length (zk--grep-file-list " (single|double) " t t))))))
 
-(ert-deftest tests-zk/zk--directory-files ()
+(ert-deftest zk--directory-files ()
   (__with-zk-environment :standard ()
     (should (= 2243 (length (zk--directory-files)))))
   (__with-zk-environment :many-in-subdirs ()
@@ -170,12 +170,12 @@ Additional variables can be defined in VARLIST"
     ;; requires changing (zk-file-name-regexp)
     (should (= 0 (length (zk--directory-files))))))
 
-(ert-deftest tests-zk/zk--directory-files-w/-tempus-currens ()
+(ert-deftest zk--directory-files-w/-tempus-currens ()
   :tags '(:disabled)                    ; needs implementing
   (__with-zk-environment :tempus ()
     (should-not (= 0 (length (zk--directory-files))))))
 
-(ert-deftest tests-zk/zk--wildcard-file-path ()
+(ert-deftest zk--wildcard-file-path ()
   :tags '(:disabled)                    ; pull request
   (__with-zk-environment :numerus ()
     (should (string= "/Users/richard/Zettelkasten/numerus/a/a-0000 {κ} Central Index."
@@ -184,7 +184,7 @@ Additional variables can be defined in VARLIST"
     (should (string= "/Users/richard/Zettelkasten/tempus/2022/20221025T2032.txt"
                      (zk--wildcard-file-path "20221025T2032")))))
 
-(ert-deftest tests-zk/zk--note-file-path ()
+(ert-deftest zk--note-file-path ()
   :tags '(:disabled)
   (__with-zk-environment :many-in-subdirs
     ((zk-subdirectory-function nil))
@@ -193,7 +193,7 @@ Additional variables can be defined in VARLIST"
              (zk--note-file-path "202111102331"
                                  "{Event} WaterBear Film Screening Series at Minim")))))
 
-(ert-deftest tests-zk/zk-subdirectory-function ()
+(ert-deftest zk-subdirectory-function ()
   (__with-zk-environment :many-in-subdirs
     ((zk-subdirectory-function (lambda (id) (cl-subseq id 0 4)))
      (file (car (__zk-sample-files-for :many-in-subdirs))))
@@ -202,7 +202,7 @@ Additional variables can be defined in VARLIST"
              "~/Zk/many-in-subdirs/2020/20200101T0101 Title of note.txt"
              (zk--note-file-path "20200101T0101" "Title of note")))))
 
-(ert-deftest tests-zk/zk--parse-file ()
+(ert-deftest zk--parse-file ()
   (__with-zk-environment :standard
     ((file (car (__zk-sample-files-for :standard))))
     (should (string= (zk--parse-file 'id file) "202206052002"))
@@ -226,7 +226,7 @@ Additional variables can be defined in VARLIST"
                                 (zk--alist
                                  (zk--directory-files))))))
 
-(ert-deftest tests-zk/zk--parse-file ()
+(ert-deftest zk--parse-file ()
   "Test `zk--parse-file' after `zk--file-name-(id|title)' are added."
   :tags '(:disabled)
   (let ((orig-a (symbol-function 'zk--file-name-id))
@@ -244,7 +244,7 @@ Additional variables can be defined in VARLIST"
       (defalias 'zk--file-name-id orig-a)
       (defalias 'zk--file-name-id orig-b))))
 
-(ert-deftest tests-zk/zk--parse-file ()
+(ert-deftest zk--parse-file ()
   "Test that `zk--parse-file' behaves correctly when `zk-id-regexp' changes."
   :tags '(:disabled)
   (let ((file1 (__zk-sample-files-for :standard))
@@ -256,7 +256,7 @@ Additional variables can be defined in VARLIST"
       (should (string= (zk--parse-file 'id file1) nil))
       (should (string= (zk--parse-file 'id file2) "20220812T2046")))))
 
-(ert-deftest tests-zk/zk-file-p ()
+(ert-deftest zk-file-p ()
   "Test that `zk-file-p' catches non-zk files."
   :tags '(:disabled)
   (let ((file1 (car (__zk-sample-files-for :standard)))
@@ -266,7 +266,7 @@ Additional variables can be defined in VARLIST"
     (should (string= (match-string 1 file1) "202111102331"))
     (should-not (zk-file-p file2))))
 
-(ert-deftest tests-zk/zk-file-name-regexp ()
+(ert-deftest zk-file-name-regexp ()
   "Check that `zk-file-name-regexp' matches the right files."
   :tags '(:disabled)
   (let ((file1 (elt tests-zk--files 0))
@@ -276,7 +276,7 @@ Additional variables can be defined in VARLIST"
     (should (string= (zk--file-name-id file1) "202111102331"))
     (should (string= (zk--file-name-title file1) "{Talk} Animal History in the Anthropocene"))))
 
-(ert-deftest tests-zk/zk--singleton-p ()
+(ert-deftest zk--singleton-p ()
   :tags '(:benchmark :disabled)
   (__with-zk-environment :standard
     ((files (zk--directory-files)))
@@ -292,7 +292,7 @@ Additional variables can be defined in VARLIST"
 ;;; Zk-note
 ;;;=============================================================================
 
-(ert-deftest tests-zk/zk--alist ()
+(ert-deftest zk--alist ()
   "Make sure `zk--alist' generates the correct structure."
   :tags '(:disabled)                    ; zk-note
   (__with-zk-environment :standard ()
@@ -309,9 +309,9 @@ Additional variables can be defined in VARLIST"
 ;;; Benchmarks
 ;;;=============================================================================
 
-(ert-deftest tests-zk/bm/zk--alist ()
+(ert-deftest bm/zk--alist ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "tests-zk/__reload-zk")
+  (ert-run-tests-batch "__reload-zk")
   (garbage-collect)
   (__with-zk-environment :standard ()
     (should (benchmark-run 100 (zk--alist)))
@@ -321,28 +321,28 @@ Additional variables can be defined in VARLIST"
 ;;; 100 (zk--alist) on :standard (6.449468 12 1.1682259999999998)
 ;;; 100 (zk--alist files) on :standard (4.3255930000000005 11 1.0541220000000004)
 
-(ert-deftest tests-zk/bm/zk--generate-id ()
+(ert-deftest bm/zk--generate-id ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "tests-zk/__reload-zk")
+  (ert-run-tests-batch "__reload-zk")
   (__with-zk-environment :standard ()
     (should (null
              (benchmark-run 100
                (zk--generate-id))))))
 
-(ert-deftest tests-zk/bm/zk--parse-id ()
+(ert-deftest bm/zk--parse-id ()
   :tags '(:benchmark)
   ;;; 100 on :numerus with 3829 files (14.105008 24 2.713031)
-  (ert-run-tests-batch "tests-zk/__reload-zk")
+  (ert-run-tests-batch "__reload-zk")
   (garbage-collect)
   (__with-zk-environment :numerus ()
     (should (null
              (benchmark-run 100
                (zk--parse-id 'file-path "l-0614"))))))
 
-(ert-deftest tests-zk/bm/zk--id-list ()
+(ert-deftest bm/zk--id-list ()
   :tags '(:benchmark)
   ;; 100 on :numerus with 3829 files (14.105008 24 2.713031)
-  (ert-run-tests-batch "tests-zk/__reload-zk")
+  (ert-run-tests-batch "__reload-zk")
   (garbage-collect)
   (let (results)
     (__with-zk-environment :numerus ()
@@ -352,10 +352,10 @@ Additional variables can be defined in VARLIST"
       (push (cons "OLD: str" (benchmark-run 10 (OLD_zk--id-list "testing"))) results))
     (should-not (nreverse results))))
 
-(ert-deftest tests-zk/bm/zk--wildcard-file-path ()
+(ert-deftest bm/zk--wildcard-file-path ()
   :tags '(:benchmark)
   ;; 100 on :numerus with 3829 files (0.092291 0 0.0)
-  (ert-run-tests-batch "tests-zk/__reload-zk")
+  (ert-run-tests-batch "__reload-zk")
   (garbage-collect)
   (__with-zk-environment :numerus ()
     (should (string= (zk--wildcard-file-path "g-9172")
@@ -364,10 +364,10 @@ Additional variables can be defined in VARLIST"
              (benchmark-run 100
                (zk--wildcard-file-path "g-9172"))))))
 
-(ert-deftest tests-zk/bm/zk-insert-link ()
+(ert-deftest bm/zk-insert-link ()
   :tags '(:benchmark)
   ;;; 100 on :numerus with 4502 files
-  ;;(ert-run-tests-batch "tests-zk/__reload-zk")
+  ;;(ert-run-tests-batch "__reload-zk")
   (garbage-collect)
   (__with-zk-environment :numerus ()
     (with-temp-buffer
@@ -376,7 +376,7 @@ Additional variables can be defined in VARLIST"
                  (zk-insert-link "l-0614")
                  (insert "\n")))))))
 
-(ert-deftest tests-zk/bm/zk-completion-at-point ()
+(ert-deftest bm/zk-completion-at-point ()
   :tags '(:benchmark)
   (elp-reset-all)
   (elp-instrument-package "zk")
@@ -406,7 +406,7 @@ Additional variables can be defined in VARLIST"
       (write-file (format "%s on %s.txt" time commit)))
     (elp-restore-all)))
 
-(ert-deftest tests-zk/bm/zk-index ()
+(ert-deftest bm/zk-index ()
   :tags '(:benchmark)
   (elp-instrument-package "zk")
   (__with-zk-environment
