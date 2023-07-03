@@ -218,22 +218,6 @@ Additional variables can be defined in VARLIST"
                      "{Event} WaterBear Film Screening Series at Minim"))
     (should-error (zk--parse-file 'foobar file))))
 
-(ert-deftest tests-zk/zk--parse-id ()
-  :tags '(:disabled)
-  (__with-zk-environment :standard
-    ((file (car (__zk-sample-files-for :standard))))
-    (should (string= (file-name-base (zk--parse-id 'file-path "202206052002"
-                                                   (zk--alist
-                                                    (zk--directory-files))))
-                     (file-name-base file)))
-    (should (string= (zk--parse-id 'title "202206052002"
-                                   (zk--alist
-                                    (zk--directory-files)))
-                     "{Event} WaterBear Film Screening Series at Minim"))
-    (should-error (zk--parse-id 'foobar "202206052002"
-                                (zk--alist
-                                 (zk--directory-files))))))
-
 (ert-deftest zk--parse-file ()
   "Test `zk--parse-file' after `zk--file-name-(id|title)' are added."
   :tags '(:disabled)
@@ -312,6 +296,101 @@ Additional variables can be defined in VARLIST"
                        (zk--note-title note)))
       (should (string= "201004292342 {Talk} Lauren Berlant, 'On the Desire for the Political' @ PSU.txt"
                        (zk--note-file note))))))
+
+;;;=============================================================================
+;;; zk--id-file (2023-06-30)
+;;;=============================================================================
+
+(ert-deftest zk--id-file ()
+  (__with-zk-environment :standard
+    ((file (car (__zk-sample-files-for :standard))))
+    (should (string= (file-name-base (zk--id-file "202206052002"))
+                     (file-name-base file)))))
+
+;;;=============================================================================
+;;; zk--parse-id (2023-06-30)
+;;;=============================================================================
+
+(ert-deftest zk--parse-id ()
+  (__with-zk-environment :standard
+    ((file (car (__zk-sample-files-for :standard))))
+    (should (string= (file-name-base (zk--parse-id 'file-path "202206052002"))
+                     (file-name-base file)))
+    (should (string= (zk--parse-id 'title "202206052002")
+                     "{Event} WaterBear Film Screening Series at Minim"))
+    (should-error (zk--parse-id 'foobar "202206052002"))))
+
+(defun rb/zk--parse-id (target id &optional zk-alist)
+  "Return TARGET, either `file-path or `title, from file with ID.
+Takes a single ID, as a string. Takes an optional ZK-ALIST, for
+efficiency if `zk--parse-id' is called in an internal loop."
+  (let ((file (zk--id-file id)))
+    (cond ((eq target 'file-path)
+           file)
+          ((eq target 'title)
+           (if (string-match (zk-file-name-regexp) (file-name-nondirectory file))
+               (match-string 2 (file-name-nondirectory file))
+             (error "Cannot figure out title for file with ID %s: %s"
+                    id (file-name-nondirectory file))))
+          (t (error "Invalid target: %s" target)))))
+
+(defun gr/zk--parse-id (target ids &optional zk-alist)
+  "Return TARGET, either `file-path or `title, from files with IDS.
+Takes a single ID, as a string, or a list of IDs. Takes an
+optional ZK-ALIST, for efficiency if `zk--parse-id' is called
+in an internal loop."
+  (cond
+   ((and (eq target 'file-path)
+         (stringp ids))
+    (car (zk--directory-files t ids)))
+   ((and (eq target 'file-path)
+         (zk--singleton-p ids))
+    (car (zk--directory-files t (car ids))))
+   (t
+    (let* ((zk-alist (or zk-alist
+                         (zk--alist)))
+           (zk-id-list (zk--id-list))
+           (return
+            (cond ((eq target 'file-path)
+                   (cond ((stringp ids)
+                          (if (member ids zk-id-list)
+                              (cddr (assoc ids zk-alist))
+                            (user-error "No file associated with %s" ids)))
+                         ((listp ids)
+                          (mapcar
+                           (lambda (x)
+                             (caddr (assoc x zk-alist)))
+                           ids))))
+                  ((eq target 'title)
+                   (cond ((stringp ids)
+                          (if (member ids zk-id-list)
+                              (cadr (assoc ids zk-alist))
+                            (user-error "No file associated with %s" ids)))
+                         ((listp ids)
+                          (mapcar
+                           (lambda (x)
+                             (cadr (assoc x zk-alist)))
+                           ids)))))))
+      (if (zk--singleton-p return)
+          (car return)
+        return)))))
+
+(ert-deftest rb/zk--parse-id ()
+  (__with-zk-environment :standard
+    ((file (car (__zk-sample-files-for :standard))))
+    (should (string= (file-name-base (rb/zk--parse-id 'file-path "202206052002"))
+                     (file-name-base file)))
+    (should (string= (rb/zk--parse-id 'title "202206052002")
+                     "{Event} WaterBear Film Screening Series at Minim"))
+    (should-error (rb/zk--parse-id 'foobar "202206052002"))))
+
+(ert-deftest benchmark/zk--parse-id ()
+  :tags '(:benchmark)
+  (ert-run-tests-batch "__reload-zk")
+  (garbage-collect)
+  (__with-zk-environment :standard ()
+    (should (benchmark-run 100 (gr/zk--parse-id 'file-path "202206052002")))
+    (should (benchmark-run 100 (zk--parse-id 'file-path "202206052002")))))
 
 ;;;=============================================================================
 ;;; Benchmarks
