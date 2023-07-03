@@ -44,12 +44,14 @@
 
 (defvar __zk-environments
   '((:many-in-subdirs
-     (zk-directory "~/Zk/many-in-subdirs")
-     (zk-id-regexp "\\([0-9]\\{12\\}\\)"))
-    (:standard
-     (zk-directory "~/Zk/standard")
+     (zk-directory "~/.emacs.d/straight/repos/zk/tests/sandbox/many-in-subdirs")
      (zk-id-regexp "\\([0-9]\\{12\\}\\)")
-     (zk-directory-recursive nil))
+     (zk-subdirectory-function nil))
+    (:standard
+     (zk-directory "~/.emacs.d/straight/repos/zk/tests/sandbox/standard")
+     (zk-id-regexp "\\([0-9]\\{12\\}\\)")
+     (zk-directory-recursive nil)
+     (zk-subdirectory-function nil))
     (:numerus
      (zk-directory (file-name-concat (getenv "ZETTEL_DIR")
                                      (file-name-as-directory "numerus")))
