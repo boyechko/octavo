@@ -495,20 +495,9 @@ If UNIQUE is non-nil, remove duplicate matches."
       result)))
 
 (defun zk--grep-tag-list ()
-  "Return list of tags from all notes in zk directory."
-  (delete-dups
-   (split-string
-    (shell-command-to-string
-     (concat "grep"
-             " --only-matching"
-             " --no-filename "
-             " --ignore-case "
-             " --recursive "
-             " --include \\*." zk-file-extension
-             " --regexp=" (shell-quote-argument zk-tag-regexp)
-             " " zk-directory
-             " 2>/dev/null"))
-    "\n" 'omit-nulls "\s")))
+  "Return list of tags from all notes in zk directory.
+What counts as a tag depends on `zk-tag-regexp'."
+  (zk--grep-match-list zk-tag-regexp 'unique))
 
 (defun zk--select-file (&optional prompt list group sort)
   "Wrapper around `completing-read' to select zk-file.
@@ -1060,22 +1049,10 @@ Select TAG, with completion, from list of all tags in zk notes."
 ;;; Find Dead Links and Unlinked Notes
 (defun zk--grep-link-id-list ()
   "Return list of all ids that appear as links in `zk-directory' files."
-  (let* ((files (shell-command-to-string
-                 (concat "grep"
-                         " --only-matching"
-                         " --no-filename"
-                         " --ignore-case"
-                         " --recursive"
-                         " --regexp=" (shell-quote-argument (zk-link-regexp))
-                         " " zk-directory
-                         " 2>/dev/null")))
-         (list (split-string files "\n" t))
-         (ids (mapcar
-               (lambda (x)
-                 (string-match zk-id-regexp x)
-                 (match-string 0 x))
-               list)))
-    (delete-dups ids)))
+  (mapcar (lambda (link)
+            (string-match zk-id-regexp link)
+            (match-string 0 link))
+          (zk--grep-match-list (zk-link-regexp) 'unique)))
 
 (defun zk--dead-link-id-list ()
   "Return list of all links with no corresponding note."
