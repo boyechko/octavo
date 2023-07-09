@@ -450,16 +450,13 @@ manual page `re_format(7)' for details."
         (replace-regexp-in-string "\\\\|" "NOT_IMPLEMENTED" result nil 'literal)))
     result))
 
-(defun zk--grep-file-list (regexp &optional extended invert)
+(defun zk--grep-file-list (regexp &optional invert)
   "Return a list of files containing REGEXP.
-If EXTENDED is non-nil, use egrep. If INVERT is non-nil,
-return list of files not matching the regexp."
-  (let ((posix-regexp (if extended
-                          (zk--elisp-regexp-to-posix regexp)
-                        (zk--elisp-regexp-to-posix regexp 'basic))))
+If INVERT is non-nil, return list of files *not* matching."
+  (let ((posix-regexp (zk--elisp-regexp-to-posix regexp)))
     (split-string
      (shell-command-to-string
-      (concat (if extended "egrep" "grep")
+      (concat "egrep"
               (if invert " --files-without-match" " --files-with-matches")
               " --recursive"
               " --ignore-case"
