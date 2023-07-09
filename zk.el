@@ -427,6 +427,29 @@ file-paths."
              (buffer-file-name x)))
          (buffer-list))))
 
+(defun zk--elisp-regexp-to-posix (regexp &optional basic)
+  "Convert Elisp-style REGEXP to extended POSIX 1003.2 regexp.
+If BASIC is non-nil, convert to basic regexp instead. See
+manual page `re_format(7)' for details."
+  (let (result)
+    ;; strip numbered groups for extended REs, numbered and shy groups for basic
+    (setq result
+      (if basic
+          (replace-regexp-in-string "\\\\(\\?[0-9]?:" "\\(" regexp nil 'literal)
+        (replace-regexp-in-string "\\\\(\\?[0-9]:" "\\(" regexp nil 'literal)))
+    ;; un-escape special characters (){}|+ for extended REs
+    (unless basic
+      (setq result
+        (replace-regexp-in-string "\\\\\\([(){}+|]\\)" "\\1" result)))
+    ;; for basic REs, strip \| (or) operator
+    (when basic
+      ;; FIXME: Basic REs don't have or (\|) operator, as in \(one\|two\); one
+      ;; would need to pass multiple -e command line args to grep, so simply
+      ;; stripping them removes important functionality if user relies on that.
+      (setq result
+        (replace-regexp-in-string "\\\\|" "NOT_IMPLEMENTED" result nil 'literal)))
+    result))
+
 (defun zk--grep-file-list (regexp &optional extended invert)
   "Return a list of files containing REGEXP.
 If EXTENDED is non-nil, use egrep. If INVERT is non-nil,
