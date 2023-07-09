@@ -472,18 +472,10 @@ passed directly to `grep' command."
 (defun zk--grep-file-list (regexp &optional invert)
   "Return a list of files containing REGEXP.
 If INVERT is non-nil, return list of files *not* matching."
-  (let ((posix-regexp (zk--elisp-regexp-to-posix regexp)))
-    (split-string
-     (shell-command-to-string
-      (concat "egrep"
-              (if invert " --files-without-match" " --files-with-matches")
-              " --recursive"
-              " --ignore-case"
-              " --include=\\*." zk-file-extension
-              " --regexp=" (shell-quote-argument posix-regexp)
-              " " zk-directory
-              " 2>/dev/null"))
-     "\n" t)))
+  (zk--grep-command regexp
+                    (if invert
+                        "--files-without-match"
+                      "--files-with-matches")))
 
 (defun zk--grep-id-list (regexp)
   "Return a list of IDs for files containing REGEXP."
