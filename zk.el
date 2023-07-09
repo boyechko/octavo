@@ -484,6 +484,16 @@ If INVERT is non-nil, return list of files *not* matching."
         (list ids)
       ids)))
 
+(defun zk--grep-match-list (regexp &optional unique)
+  "Return list of matches for REGEXP from notes in `zk-directory'.
+If UNIQUE is non-nil, remove duplicate matches."
+  (let ((result (zk--grep-command regexp
+                                  "--only-matching"
+                                  "--no-filename")))
+    (if unique
+        (delete-dups result)
+      result)))
+
 (defun zk--grep-tag-list ()
   "Return list of tags from all notes in zk directory."
   (delete-dups
