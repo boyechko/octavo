@@ -427,8 +427,8 @@ file-paths."
              (buffer-file-name x)))
          (buffer-list))))
 
-(defun zk--grep-file-list (str &optional extended invert)
-  "Return a list of files containing regexp STR.
+(defun zk--grep-file-list (regexp &optional extended invert)
+  "Return a list of files containing REGEXP.
 If EXTENDED is non-nil, use egrep. If INVERT is non-nil,
 return list of files not matching the regexp."
   (split-string
@@ -438,7 +438,7 @@ return list of files not matching the regexp."
             " --recursive"
             " --ignore-case"
             " --include=\\*." zk-file-extension
-            " --regexp=" (shell-quote-argument str)
+            " --regexp=" (shell-quote-argument regexp)
             " " zk-directory
             " 2>/dev/null"))
    "\n" t))
