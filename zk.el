@@ -446,21 +446,25 @@ return list of files not matching the regexp."
 (defun zk--grep-id-list (str)
   "Return a list of IDs for files containing STR."
   (let ((ids (zk--parse-file 'id (zk--grep-file-list str))))
-    (if (stringp ids) (list ids)
+    (if (stringp ids)
+        (list ids)
       ids)))
 
 (defun zk--grep-tag-list ()
   "Return list of tags from all notes in zk directory."
-  (let* ((files (shell-command-to-string (concat
-                                          "grep -ohir --include \\*."
-                                          zk-file-extension
-                                          " -e "
-                                          (shell-quote-argument
-                                           zk-tag-regexp)
-                                          " "
-                                          zk-directory " 2>/dev/null")))
-         (list (split-string files "\n" t "\s")))
-    (delete-dups list)))
+  (delete-dups
+   (split-string
+    (shell-command-to-string
+     (concat "grep"
+             " --only-matching"
+             " --no-filename "
+             " --ignore-case "
+             " --recursive "
+             " --include \\*." zk-file-extension
+             " --regexp=" (shell-quote-argument zk-tag-regexp)
+             " " zk-directory
+             " 2>/dev/null"))
+    "\n" 'omit-nulls "\s")))
 
 (defun zk--select-file (&optional prompt list group sort)
   "Wrapper around `completing-read' to select zk-file.
@@ -1010,15 +1014,17 @@ Select TAG, with completion, from list of all tags in zk notes."
   (insert tag))
 
 ;;; Find Dead Links and Unlinked Notes
-
 (defun zk--grep-link-id-list ()
   "Return list of all ids that appear as links in `zk-directory' files."
-  (let* ((files (shell-command-to-string (concat
-                                          "grep -ohir -e "
-                                          (shell-quote-argument
-                                           (zk-link-regexp))
-                                          " "
-                                          zk-directory " 2>/dev/null")))
+  (let* ((files (shell-command-to-string
+                 (concat "grep"
+                         " --only-matching"
+                         " --no-filename"
+                         " --ignore-case"
+                         " --recursive"
+                         " --regexp=" (shell-quote-argument (zk-link-regexp))
+                         " " zk-directory
+                         " 2>/dev/null")))
          (list (split-string files "\n" t))
          (ids (mapcar
                (lambda (x)
