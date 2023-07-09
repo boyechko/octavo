@@ -477,9 +477,10 @@ If INVERT is non-nil, return list of files *not* matching."
                         "--files-without-match"
                       "--files-with-matches")))
 
-(defun zk--grep-id-list (regexp)
-  "Return a list of IDs for files containing REGEXP."
-  (let ((ids (zk--parse-file 'id (zk--grep-file-list regexp))))
+(defun zk--grep-id-list (regexp &optional invert)
+  "Return a list of IDs for files containing REGEXP.
+If INVERT is non-nil, return list of files *not* matching."
+  (let ((ids (zk--parse-file 'id (zk--grep-file-list regexp invert))))
     (if (stringp ids)
         (list ids)
       ids)))
