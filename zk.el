@@ -356,18 +356,18 @@ The ID is created using `zk-id-time-string-format'."
       (setq id (number-to-string id)))
     id))
 
-(defun zk--id-list (&optional str zk-alist)
+(defun zk--id-list (&optional regexp zk-alist)
   "Return a list of zk IDs for notes in `zk-directory'.
-Optional search for STR in note title, case-insenstive. Takes an
-optional ZK-ALIST, for efficiency if `zk--id-list' is called in
-an internal loop."
-  (if str
+Optional search for REGEXP in note title, case-insenstive.
+Takes an optional ZK-ALIST, for efficiency if `zk--id-list'
+is called in an internal loop."
+  (if regexp
       (let ((zk-alist (or zk-alist (zk--alist)))
             (case-fold-search t)
             (ids))
         (dolist (item zk-alist)
-          (if str
-              (when (string-match str (cadr item))
+          (if regexp
+              (when (string-match regexp (cadr item))
                 (push (car item) ids))
             (push (car item) ids)))
         ids)
@@ -466,9 +466,9 @@ If INVERT is non-nil, return list of files *not* matching."
               " 2>/dev/null"))
      "\n" t)))
 
-(defun zk--grep-id-list (str)
-  "Return a list of IDs for files containing STR."
-  (let ((ids (zk--parse-file 'id (zk--grep-file-list str))))
+(defun zk--grep-id-list (regexp)
+  "Return a list of IDs for files containing REGEXP."
+  (let ((ids (zk--parse-file 'id (zk--grep-file-list regexp))))
     (if (stringp ids)
         (list ids)
       ids)))
@@ -828,16 +828,16 @@ title."
   (find-file (zk--parse-id 'file-path id)))
 
 ;;;###autoload
-(defun zk-find-file-by-full-text-search (str)
-  "Find files containing regexp STR."
+(defun zk-find-file-by-full-text-search (regexp)
+  "Find files containing REGEXP."
   (interactive
    (list (read-string "Search string: "
                       nil 'zk-search-history)))
-  (let ((files (zk--grep-file-list str)))
+  (let ((files (zk--grep-file-list regexp)))
     (if files
         (find-file (funcall zk-select-file-function
-                            (format "Files containing \"%s\": " str) files))
-      (user-error "No results for \"%s\"" str))))
+                            (format "Files containing \"%s\": " regexp) files))
+      (user-error "No results for \"%s\"" regexp))))
 
 ;;;###autoload
 (defun zk-current-notes ()
