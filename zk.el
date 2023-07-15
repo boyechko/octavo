@@ -362,10 +362,10 @@ The ID is created using `zk-id-time-string-format'."
 
 (defun zk--id-list (&optional regexp zk-alist)
   "Return a list of zk IDs for notes in `zk-directory'.
-Optional search for REGEXP in note title, case-insenstive.
+Optionally search for REGEXP in note title, case-insenstive.
 Takes an optional ZK-ALIST, for efficiency if `zk--id-list'
 is called in an internal loop."
-  (if regexp
+  (if (or regexp zk-alist)
       (let ((zk-alist (or zk-alist (zk--alist)))
             (case-fold-search t)
             (ids))
