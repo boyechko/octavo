@@ -399,6 +399,44 @@ in an internal loop."
     (should (benchmark-run 100 (zk--parse-id 'file-path "202206052002")))))
 
 ;;;=============================================================================
+;;; Regexps (pull request #63; 2023-07-14)
+;;;=============================================================================
+
+(ert-deftest zk--posix-regexp ()
+  (let ((numerus "\\(?:[a-z]-[0-9]\\{4\\}\\)")
+        (tempus "\\([0-9]\\{8\\}T[0-9]\\{4\\}\\)")
+        (all "\\([a-z]-[0-9]\\{4\\}~[0-9][0-9]\\|[0-9]\\{8\\}T[0-9]\\{4\\}\\|[a-z]-[0-9]\\{4\\}\\)"))
+    (should (string= (zk--posix-regexp "\\(.*\\)") "(.*)"))
+    (should (string= (zk--posix-regexp "\\(.*\\)" 'basic) "\\(.*\\)"))
+    (should (string= (zk--posix-regexp numerus)
+                     "(?:[a-z]-[0-9]{4})"))
+    (should (string= (zk--posix-regexp numerus 'basic)
+                     "\\([a-z]-[0-9]\\{4\\}\\)"))
+    (should (string= (zk--posix-regexp tempus)
+                     "([0-9]{8}T[0-9]{4})"))
+    (should
+     (string= (zk--posix-regexp all)
+              "([a-z]-[0-9]{4}~[0-9][0-9]|[0-9]{8}T[0-9]{4}|[a-z]-[0-9]{4})"))
+    (should
+     (string= (zk--posix-regexp all 'basic)
+              "\\([a-z]-[0-9]\\{4\\}~[0-9][0-9]\\|[0-9]\\{8\\}T[0-9]\\{4\\}\\|[a-z]-[0-9]\\{4\\}\\)"))
+    (should (benchmark 10000 (zk--posix-regexp all)))))
+
+(ert-deftest zk--grep-commands ()
+  (__with-zk-environment :scriptum ()
+    (should (= 13 (length (zk--grep-id-list "Taiwan"))))
+    (should (= 13 (length (zk--grep-file-list "Taiwan"))))
+    (should (= 13 (length (zk--grep-file-list "Taiwan"))))
+    ;; extended regexp
+    (should (= 16 (length (zk--grep-file-list "\\(garbage\\|waste\\)"))))
+    ;; tags
+    (should (equal '("#1" "#2" "#3" "#diss" "#metro2033" "#split" "#todo" "#102")
+                   (zk--grep-tag-list))))
+  (__with-zk-environment :numerus ()
+    (should (= (length (zk--backlinks-list "t-7019")) 13)) ; Yomi Braester [[t-7019]]
+    (should (= (length (zk--backlinks-list "y-7690")) 1)))) ; Lee Yu-lin [[y-7690]]
+
+;;;=============================================================================
 ;;; Benchmarks
 ;;;=============================================================================
 
