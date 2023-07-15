@@ -290,6 +290,38 @@ Additional variables can be defined in VARLIST"
              (benchmark-run 1000 (zk--singleton-p files))))))
 
 ;;;=============================================================================
+;;; zk--processor
+;;;=============================================================================
+
+(defun zk--processor/gr (arg)
+  "Return list of files.
+ARG can be zk-file or zk-id as string or list, single or multiple."
+  (let* ((zk-alist (zk--alist))
+         (files (cond
+                 ((stringp arg)
+                  (if (zk-file-p arg)
+                      (list arg)
+                    (list (zk--parse-id 'file-path arg zk-alist))))
+                 ((zk--singleton-p arg)
+                  (if (zk-file-p (car arg))
+                      arg
+                    (list (zk--parse-id 'file-path (car arg) zk-alist))))
+                 (t
+                  (if (zk-file-p (car arg))
+                      arg
+                    (zk--parse-id 'file-path arg zk-alist))))))
+    files))
+
+(ert-deftest zk--processor ()
+  (__with-zk-environment :numerus ()
+    (should (equal (zk--processor/gr "a-0000")
+                   (zk--processor "a-0000")))
+    (should (equal (zk--processor/gr '("a-0000" "c-4317"))
+                   (zk--processor '("a-0000" "c-4317"))))
+    (should-error (zk--processor 4))
+    ))
+
+;;;=============================================================================
 ;;; Zk-note
 ;;;=============================================================================
 
