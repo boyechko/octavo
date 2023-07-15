@@ -140,15 +140,12 @@ Additional variables can be defined in VARLIST"
 ;;; Actual Tests
 ;;;=============================================================================
 
-  :tags '(:disabled)                    ; after PR #46
-  (__with-zk-environment :standard ()
 (ert-deftest zk--file-id ()
+  (__with-zk-environment :tempus ()
     (with-current-buffer "tests-zk.el"
       (should-not (zk--file-id buffer-file-name)))
-    (let* ((file (car (__zk-sample-files-for :standard)))
-           (buffer-file-name file))
-      (should (string= (zk--file-id file) "202206052002"))
-      (should (string= (zk--current-id) "202206052002")))))
+    (let* ((file (car (__zk-sample-files-for :tempus))))
+      (should (string= (zk--file-id file) "20220812T2046")))))
 
 ;; FIXME: Update? Fix?
 (ert-deftest zk--format ()
