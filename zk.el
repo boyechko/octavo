@@ -123,10 +123,14 @@ Note: The regexp to find zk IDs is set separately. If you change
 this value, set `zk-id-regexp' so that the zk IDs can be found."
   :type 'string)
 
-(defcustom zk-id-regexp "\\([0-9]\\{12\\}\\)"
+(defcustom zk-id-regexp "[0-9]\\{12\\}"
   "The regular expression used to search for zk IDs.
 Set it so that it matches strings generated with
-`zk-id-time-string-format'."
+`zk-id-time-string-format'. The expression should not
+capture any explicitly numbered groups.
+
+See `zk-file-name-regexp' and `zk-link-regexp' functions for
+how this regexp is used."
   :type 'regexp)
 
 (defcustom zk-title-regexp ".*?"
@@ -1051,8 +1055,8 @@ Select TAG, with completion, from list of all tags in zk notes."
 (defun zk--grep-link-id-list ()
   "Return list of all ids that appear as links in `zk-directory' files."
   (mapcar (lambda (link)
-            (string-match zk-id-regexp link)
-            (match-string 0 link))
+            (when (string-match zk-id-regexp link)
+              (match-string 0 link)))
           (zk--grep-match-list (zk-link-regexp) 'unique)))
 
 (defun zk--dead-link-id-list ()
