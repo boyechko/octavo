@@ -356,18 +356,18 @@ The ID is created using `zk-id-time-string-format'."
       (setq id (number-to-string id)))
     id))
 
-(defun zk--id-list (&optional str zk-alist)
+(defun zk--id-list (&optional regexp zk-alist)
   "Return a list of zk IDs for notes in `zk-directory'.
-Optional search for STR in note title, case-insenstive. Takes an
-optional ZK-ALIST, for efficiency if `zk--id-list' is called in
-an internal loop."
-  (if str
+Optional search for REGEXP in note title, case-insenstive.
+Takes an optional ZK-ALIST, for efficiency if `zk--id-list'
+is called in an internal loop."
+  (if regexp
       (let ((zk-alist (or zk-alist (zk--alist)))
             (case-fold-search t)
             (ids))
         (dolist (item zk-alist)
-          (if str
-              (when (string-match str (cadr item))
+          (if regexp
+              (when (string-match regexp (cadr item))
                 (push (car item) ids))
             (push (car item) ids)))
         ids)
@@ -450,42 +450,55 @@ regexp instead. See manual page `re_format(7)' for details."
         (replace-regexp-in-string "\\\\\\([(){}+|]\\)" "\\1" result)))
     result))
 
-(defun zk--grep-file-list (str &optional extended invert)
-  "Return a list of files containing regexp STR.
-If EXTENDED is non-nil, use egrep. If INVERT is non-nil,
-return list of files not matching the regexp."
+(defun zk--grep-command (regexp &rest other-options)
+  "Return a list of files containing REGEXP.
+Any remaining OTHER-OPTIONS should be strings that will be
+passed directly to `grep' command."
   (split-string
    (shell-command-to-string
-    (concat (if extended "egrep" "grep")
-            (if invert " --files-without-match" " --files-with-matches")
-            " --recursive"
-            " --ignore-case"
-            " --include=\\*." zk-file-extension
-            " --regexp=" (shell-quote-argument
-                          (zk--posix-regexp str (not extended)))
-            " " zk-directory
-            " 2>/dev/null"))
-   "\n" t))
+    (mapconcat #'identity
+      (append (list "egrep"
+                    "--recursive"
+                    "--ignore-case"
+                    (concat "--include=\\*." zk-file-extension)
+                    (concat "--regexp="
+                            (shell-quote-argument (zk--posix-regexp regexp)))
+                      zk-directory
+                      "2>/dev/null")
+                other-options)
+        " "))
+     "\n" 'omit-nulls "\s"))
 
-(defun zk--grep-id-list (str)
-  "Return a list of IDs for files containing STR."
-  (let ((ids (zk--parse-file 'id (zk--grep-file-list str))))
-    (if (stringp ids) (list ids)
+(defun zk--grep-file-list (regexp &optional invert)
+  "Return a list of files containing REGEXP.
+If INVERT is non-nil, return list of files *not* matching."
+  (zk--grep-command regexp
+                    (if invert
+                        "--files-without-match"
+                      "--files-with-matches")))
+
+(defun zk--grep-id-list (regexp &optional invert)
+  "Return a list of IDs for files containing REGEXP.
+If INVERT is non-nil, return list of files *not* matching."
+  (let ((ids (zk--parse-file 'id (zk--grep-file-list regexp invert))))
+    (if (stringp ids)
+        (list ids)
       ids)))
 
+(defun zk--grep-match-list (regexp &optional unique)
+  "Return list of matches for REGEXP from notes in `zk-directory'.
+If UNIQUE is non-nil, remove duplicate matches."
+  (let ((result (zk--grep-command regexp
+                                  "--only-matching"
+                                  "--no-filename")))
+    (if unique
+        (delete-dups result)
+      result)))
+
 (defun zk--grep-tag-list ()
-  "Return list of tags from all notes in zk directory."
-  (let* ((files
-          (shell-command-to-string (concat
-                                    "grep -ohir --include \\*."
-                                    zk-file-extension
-                                    " -e "
-                                    (shell-quote-argument
-                                     (zk--posix-regexp zk-tag-regexp 'basic))
-                                    " "
-                                    zk-directory " 2>/dev/null")))
-         (list (split-string files "\n" t "\s")))
-    (delete-dups list)))
+  "Return list of tags from all notes in zk directory.
+What counts as a tag depends on `zk-tag-regexp'."
+  (zk--grep-match-list zk-tag-regexp 'unique))
 
 (defun zk--select-file (&optional prompt list group sort)
   "Wrapper around `completing-read' to select zk-file.
@@ -826,16 +839,16 @@ title."
   (find-file (zk--parse-id 'file-path id)))
 
 ;;;###autoload
-(defun zk-find-file-by-full-text-search (str)
-  "Find files containing regexp STR."
+(defun zk-find-file-by-full-text-search (regexp)
+  "Find files containing REGEXP."
   (interactive
    (list (read-string "Search string: "
                       nil 'zk-search-history)))
-  (let ((files (zk--grep-file-list str)))
+  (let ((files (zk--grep-file-list regexp)))
     (if files
         (find-file (funcall zk-select-file-function
-                            (format "Files containing \"%s\": " str) files))
-      (user-error "No results for \"%s\"" str))))
+                            (format "Files containing \"%s\": " regexp) files))
+      (user-error "No results for \"%s\"" regexp))))
 
 ;;;###autoload
 (defun zk-current-notes ()
@@ -1035,23 +1048,12 @@ Select TAG, with completion, from list of all tags in zk notes."
   (insert tag))
 
 ;;; Find Dead Links and Unlinked Notes
-
 (defun zk--grep-link-id-list ()
   "Return list of all ids that appear as links in `zk-directory' files."
-  (let* ((files (shell-command-to-string
-                 (concat
-                  "grep -ohir -e "
-                  (shell-quote-argument
-                   (zk--posix-regexp (zk-link-regexp) 'basic))
-                  " "
-                  zk-directory " 2>/dev/null")))
-         (list (split-string files "\n" t))
-         (ids (mapcar
-               (lambda (x)
-                 (string-match zk-id-regexp x)
-                 (match-string 0 x))
-               list)))
-    (delete-dups ids)))
+  (mapcar (lambda (link)
+            (string-match zk-id-regexp link)
+            (match-string 0 link))
+          (zk--grep-match-list (zk-link-regexp) 'unique)))
 
 (defun zk--dead-link-id-list ()
   "Return list of all links with no corresponding note."
