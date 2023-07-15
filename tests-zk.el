@@ -175,10 +175,12 @@ Additional variables can be defined in VARLIST"
     (should (eq 2063 (length (zk--grep-file-list " (single|double) " t t))))))
 
 (ert-deftest zk--directory-files ()
+  (ezeka-zk-hacks-mode -1)
   (__with-zk-environment :standard ()
     (should (= 2243 (length (zk--directory-files)))))
   (__with-zk-environment :many-in-subdirs ()
     (should (= 2242 (length (zk--directory-files)))))
+  (ezeka-zk-hacks-mode 1)
   (__with-zk-environment :numerus ()
     (should-not (= 0 (length (zk--directory-files)))))
   (__with-zk-environment :tempus ()
