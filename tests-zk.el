@@ -124,9 +124,13 @@ Additional variables can be defined in VARLIST"
   (__with-zk-environment :many-in-subdirs
     ((zk-subdirectory-function nil))
     (should-not zk-subdirectory-function)
-    (should (string= zk-directory "~/Zk/many-in-subdirs"))
-    (should (string= (car (__zk-sample-files-for :standard))
-                     "202206052002 {Event} WaterBear Film Screening Series at Minim.txt"))))
+    (should (string= zk-directory
+                     (cadr
+                      (cl-find 'zk-directory (alist-get :many-in-subdirs __zk-environments)
+                               :key #'car :test #'eq))))
+    (should (string=
+             (car (__zk-sample-files-for :standard))
+             "202206052002 {Event} WaterBear Film Screening Series at Minim.txt"))))
 
 (ert-deftest __reload-zk ()
   (load-file (straight--repos-file "zk" "zk.el"))
