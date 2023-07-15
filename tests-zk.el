@@ -474,17 +474,36 @@ in an internal loop."
              (benchmark-run 100
                (zk--parse-id 'file-path "l-0614"))))))
 
+(defun zk--id-list/gr (&optional str zk-alist)
+  "Return a list of zk IDs for notes in `zk-directory'.
+Optional search for STR in note title, case-insenstive. Takes an
+optional ZK-ALIST, for efficiency if `zk--id-list' is called in
+an internal loop."
+  (if str
+      (let ((zk-alist (or zk-alist (zk--alist)))
+            (case-fold-search t)
+            (ids))
+        (dolist (item zk-alist)
+          (if str
+              (when (string-match str (cadr item))
+                (push (car item) ids))
+            (push (car item) ids)))
+        ids)
+    (zk--parse-file 'id (zk--directory-files t))))
+
 (ert-deftest bm/zk--id-list ()
   :tags '(:benchmark)
-  ;; 100 on :numerus with 3829 files (14.105008 24 2.713031)
   (ert-run-tests-batch "__reload-zk")
   (garbage-collect)
   (let (results)
     (__with-zk-environment :numerus ()
-      (push (cons "(no args)" (benchmark-run 10 (zk--id-list))) results)
-      (push (cons "str" (benchmark-run 10 (zk--id-list "testing"))) results)
-      (push (cons "OLD: (no args)" (benchmark-run 10 (OLD_zk--id-list nil))) results)
-      (push (cons "OLD: str" (benchmark-run 10 (OLD_zk--id-list "testing"))) results))
+      (push (cons "NEW: (no args)" (benchmark-run 10 (zk--id-list))) results)
+      (push (cons "OLD: (no args)" (benchmark-run 10 (zk--id-list/gr))) results)
+      (push (cons "NEW: str" (benchmark-run 10 (zk--id-list "testing"))) results)
+      (push (cons "OLD: str" (benchmark-run 10 (zk--id-list/gr "testing"))) results)
+      (let ((zk-alist (zk--alist)))
+        (push (cons "NEW: zk-alist" (benchmark-run 10 (zk--id-list nil zk-alist))) results)
+        (push (cons "OLD: zk-alist" (benchmark-run 10 (zk--id-list/gr nil zk-alist))) results)))
     (should-not (nreverse results))))
 
 (ert-deftest bm/zk--wildcard-file-path ()
