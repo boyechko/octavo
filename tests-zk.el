@@ -434,6 +434,47 @@ in an internal loop."
     (should (benchmark-run 100 (zk--parse-id 'file-path "202206052002")))))
 
 ;;;=============================================================================
+;;; Zk-index-query-files (2023-07-10)
+;;;=============================================================================
+
+(ert-deftest zk-index-query-files ()
+  (__with-zk-environment :numerus ()
+    (switch-to-buffer zk-index-buffer-name)
+    (zk-index-refresh)
+    (should (= 14 (length (zk-index-query-files "humor" 'zk-index-focus))))
+    (zk-index-refresh)
+    (should (= 83 (length (zk-index-query-files "humor" 'zk-index-search))))))
+
+(ert-deftest benchmark/zk-index-query-files ()
+  :tags '(:benchmark)
+  (ert-run-tests-batch "__reload-zk")
+  (__with-zk-environment :numerus ()
+    (switch-to-buffer zk-index-buffer-name)
+    (should (benchmark-run 10           ; (26.718512 80 9.696325000000002)
+              (zk-index-refresh)
+              (garbage-collect)
+              (zk-index-query-files "humor" 'zk-index-focus)))
+    (should (benchmark-run 10           ; (34.558523 70 11.692167000000005)
+              (zk-index-refresh)
+              (garbage-collect)
+              (zk-index-query-files "humor" 'zk-index-search)))))
+
+(ert-deftest benchmark/rb/zk-index-query-files ()
+  :tags '(:benchmark)
+  (ert-run-tests-batch "__reload-zk")
+  (__with-zk-environment :numerus ()
+    (switch-to-buffer zk-index-buffer-name)
+    (should (benchmark-run 10           ; (21.83563 70 9.479023999999995)
+              (zk-index-refresh)
+              (garbage-collect)
+              (zk-index-query-files/rb "humor" 'zk-index-focus)))
+    (should (benchmark-run 10           ; (26.18411 70 9.764894999999996)
+              (zk-index-refresh)
+              (garbage-collect)
+              (zk-index-query-files/rb "humor" 'zk-index-search)))))
+
+
+;;;=============================================================================
 ;;; Regexps (pull request #63; 2023-07-14)
 ;;;=============================================================================
 
