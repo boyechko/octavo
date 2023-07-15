@@ -52,6 +52,12 @@
      (zk-id-regexp "\\([0-9]\\{12\\}\\)")
      (zk-directory-recursive nil)
      (zk-subdirectory-function nil))
+    (:wikilinks
+     (zk-directory "~/.emacs.d/straight/repos/zk/tests/sandbox/wikilinks")
+     (zk-id-regexp "\\([[:alnum:]]+\\)")
+     (zk-index-format "%t [[%i]]")
+     (zk-directory-recursive nil)
+     (zk-subdirectory-function nil))
     (:numerus
      (zk-directory (file-name-concat (getenv "ZETTEL_DIR")
                                      (file-name-as-directory "numerus")))
