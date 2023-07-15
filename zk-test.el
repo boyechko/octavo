@@ -1,4 +1,4 @@
-;;; tests-zk.el --- Unit tests for zk.el -*- lexical-binding: t; -*-
+;;; zk-test.el --- Unit tests for zk.el -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2022 Richard Boyechko
 
@@ -42,7 +42,7 @@
  '(zk-index-format "%t [[%i]]")
  '(zk-directory-recursive t))
 
-(defvar __zk-environments
+(defvar zk-test-environments
   '((:many-in-subdirs
      (zk-directory "~/.emacs.d/straight/repos/zk/tests/sandbox/many-in-subdirs")
      (zk-id-regexp "\\([0-9]\\{12\\}\\)")
@@ -76,7 +76,7 @@
   "Description of my testing environments.
 Each item has the form of (:name varlist)")
 
-(defvar __zk-env-sample-files
+(defvar zk-test-sample-files
   '((:standard
      "202206052002 {Event} WaterBear Film Screening Series at Minim.txt")
     (:tempus
@@ -92,47 +92,47 @@ The form is (:ENVIRONMENT SAMPLE1 [... SAMPLEN]).")
 ;;; Helper Functions
 ;;;=============================================================================
 
-(defun __zk-sample-files-for (env &optional full-path)
+(defun zk-test-sample-files-for (env &optional full-path)
   "Return a sample file for the given ENV'ironment.
 If FULL-PATH is non-nil, return full paths."
   (let ((dir (alist-get 'zk-directory
                         (alist-get
                          env
-                         __zk-environments))))
+                         zk-test-environments))))
     (mapcar (if full-path
                 (lambda (f)
                   (expand-file-name f dir))
               #'identity)
-            (alist-get env __zk-env-sample-files))))
+            (alist-get env zk-test-sample-files))))
 
-(defmacro __with-zk-environment (env varlist &rest body)
+(defmacro with-zk-test-environment (env varlist &rest body)
   "Evaluate BODY inside a `let` form binding ENV's varlist.
 Additional variables can be defined in VARLIST"
   (declare (indent 2))
-  `(let (,@(alist-get env __zk-environments)
+  `(let (,@(alist-get env zk-test-environments)
          ,@varlist)
      ,@body))
 
-(defun __set-zk-environment (env)
+(defun zk-test-set-environment (env)
   "Set the variables needed to work wiht environment ENV."
   (interactive
-   (list (completing-read "Which environment? " __zk-environments)))
-  (apply #'custom-set-variables (alist-get (intern-soft env) __zk-environments)))
+   (list (completing-read "Which environment? " zk-test-environments)))
+  (apply #'custom-set-variables (alist-get (intern-soft env) zk-test-environments)))
 
-(ert-deftest __with-zk-environment ()
+(ert-deftest with-zk-test-environment ()
   :tags '(:disabled)
-  (__with-zk-environment :many-in-subdirs
+  (with-zk-test-environment :many-in-subdirs
     ((zk-subdirectory-function nil))
     (should-not zk-subdirectory-function)
     (should (string= zk-directory
                      (cadr
-                      (cl-find 'zk-directory (alist-get :many-in-subdirs __zk-environments)
+                      (cl-find 'zk-directory (alist-get :many-in-subdirs zk-test-environments)
                                :key #'car :test #'eq))))
     (should (string=
-             (car (__zk-sample-files-for :standard))
+             (car (zk-test-sample-files-for :standard))
              "202206052002 {Event} WaterBear Film Screening Series at Minim.txt"))))
 
-(ert-deftest __reload-zk ()
+(ert-deftest zk-test-reload-zk ()
   (load-file (straight--repos-file "zk" "zk.el"))
   (load-file (straight--repos-file "zk" "zk-index.el")))
 
@@ -141,10 +141,10 @@ Additional variables can be defined in VARLIST"
 ;;;=============================================================================
 
 (ert-deftest zk--file-id ()
-  (__with-zk-environment :tempus ()
+  (with-zk-test-environment :tempus ()
     (with-current-buffer "tests-zk.el"
       (should-not (zk--file-id buffer-file-name)))
-    (let* ((file (car (__zk-sample-files-for :tempus))))
+    (let* ((file (car (zk-test-sample-files-for :tempus))))
       (should (string= (zk--file-id file) "20220812T2046")))))
 
 ;; FIXME: Update? Fix?
@@ -166,7 +166,7 @@ Additional variables can be defined in VARLIST"
 
 (ert-deftest zk--grep-file-list ()
   :tags '(:disabled)                    ; after PR #41
-  (__with-zk-environment :standard ()
+  (with-zk-test-environment :standard ()
     (should (eq 144 (length (zk--grep-file-list " single "))))
     (should (eq 42 (length (zk--grep-file-list " double "))))
     (should (eq 180 (length (zk--grep-file-list " \\(single\\|double\\) " nil))))
@@ -176,52 +176,52 @@ Additional variables can be defined in VARLIST"
 
 (ert-deftest zk--directory-files ()
   (ezeka-zk-hacks-mode -1)
-  (__with-zk-environment :standard ()
+  (with-zk-test-environment :standard ()
     (should (= 2243 (length (zk--directory-files)))))
-  (__with-zk-environment :many-in-subdirs ()
+  (with-zk-test-environment :many-in-subdirs ()
     (should (= 2242 (length (zk--directory-files)))))
   (ezeka-zk-hacks-mode 1)
-  (__with-zk-environment :numerus ()
+  (with-zk-test-environment :numerus ()
     (should-not (= 0 (length (zk--directory-files)))))
-  (__with-zk-environment :tempus ()
+  (with-zk-test-environment :tempus ()
     ;; requires changing (zk-file-name-regexp)
     (should (= 0 (length (zk--directory-files))))))
 
 (ert-deftest zk--directory-files-w/-tempus-currens ()
   :tags '(:disabled)                    ; needs implementing
-  (__with-zk-environment :tempus ()
+  (with-zk-test-environment :tempus ()
     (should-not (= 0 (length (zk--directory-files))))))
 
 (ert-deftest zk--wildcard-file-path ()
   :tags '(:disabled)                    ; pull request
-  (__with-zk-environment :numerus ()
+  (with-zk-test-environment :numerus ()
     (should (string= "/Users/richard/Zettelkasten/numerus/a/a-0000 {κ} Central Index."
                      (zk--wildcard-file-path "a-0000"))))
-  (__with-zk-environment :tempus ()
+  (with-zk-test-environment :tempus ()
     (should (string= "/Users/richard/Zettelkasten/tempus/2022/20221025T2032.txt"
                      (zk--wildcard-file-path "20221025T2032")))))
 
 (ert-deftest zk--note-file-path ()
   :tags '(:disabled)
-  (__with-zk-environment :many-in-subdirs
+  (with-zk-test-environment :many-in-subdirs
     ((zk-subdirectory-function nil))
     (should (string=
-             (car (__zk-sample-files-for :standard t))
+             (car (zk-test-sample-files-for :standard t))
              (zk--note-file-path "202111102331"
                                  "{Event} WaterBear Film Screening Series at Minim")))))
 
 (ert-deftest zk-subdirectory-function ()
-  (__with-zk-environment :many-in-subdirs
+  (with-zk-test-environment :many-in-subdirs
     ((zk-subdirectory-function (lambda (id) (cl-subseq id 0 4)))
-     (file (car (__zk-sample-files-for :many-in-subdirs))))
+     (file (car (zk-test-sample-files-for :many-in-subdirs))))
     ;; FIXME: Rewrite using FILE
     (should (string=
              "~/Zk/many-in-subdirs/2020/20200101T0101 Title of note.txt"
              (zk--note-file-path "20200101T0101" "Title of note")))))
 
 (ert-deftest zk--parse-file ()
-  (__with-zk-environment :standard
-    ((file (car (__zk-sample-files-for :standard))))
+  (with-zk-test-environment :standard
+    ((file (car (zk-test-sample-files-for :standard))))
     (should (string= (zk--parse-file 'id file) "202206052002"))
     (should (string= (zk--parse-file 'title file)
                      "{Event} WaterBear Film Screening Series at Minim"))
@@ -233,8 +233,8 @@ Additional variables can be defined in VARLIST"
   (let ((orig-a (symbol-function 'zk--file-name-id))
         (orig-b (symbol-function 'zk--file-name-title)))
     (unwind-protect
-        (__with-zk-environment :standard
-          ((file (car (__zk-sample-files-for :standard))))
+        (with-zk-test-environment :standard
+          ((file (car (zk-test-sample-files-for :standard))))
           (defalias 'zk--file-name-id
             #'(lambda (_) "202206052002"))
           (defalias 'zk--file-name-title
@@ -248,8 +248,8 @@ Additional variables can be defined in VARLIST"
 (ert-deftest zk--parse-file ()
   "Test that `zk--parse-file' behaves correctly when `zk-id-regexp' changes."
   :tags '(:disabled)
-  (let ((file1 (__zk-sample-files-for :standard))
-        (file2 (__zk-sample-files-for :tempus))
+  (let ((file1 (zk-test-sample-files-for :standard))
+        (file2 (zk-test-sample-files-for :tempus))
         (zk-id-regexp "\\([0-9]\\{12\\}\\)"))
     (should (string= (zk--parse-file 'id file1) "202206052002"))
     (should (string= (zk--parse-file 'id file2) nil))
@@ -260,8 +260,8 @@ Additional variables can be defined in VARLIST"
 (ert-deftest zk-file-p ()
   "Test that `zk-file-p' catches non-zk files."
   :tags '(:disabled)
-  (let ((file1 (car (__zk-sample-files-for :standard)))
-        (file2 (car (__zk-sample-files-for :tempus)))
+  (let ((file1 (car (zk-test-sample-files-for :standard)))
+        (file2 (car (zk-test-sample-files-for :tempus)))
         (zk-id-regexp "\\([0-9]\\{12\\}\\)"))
     (should (zk-file-p file1))
     (should (string= (match-string 1 file1) "202111102331"))
@@ -279,7 +279,7 @@ Additional variables can be defined in VARLIST"
 
 (ert-deftest zk--singleton-p ()
   :tags '(:benchmark :disabled)
-  (__with-zk-environment :standard
+  (with-zk-test-environment :standard
     ((files (zk--directory-files)))
     (should (zk--singleton-p '(1)))
     (should-not (zk--singleton-p '()))
@@ -313,7 +313,7 @@ ARG can be zk-file or zk-id as string or list, single or multiple."
     files))
 
 (ert-deftest zk--processor ()
-  (__with-zk-environment :numerus ()
+  (with-zk-test-environment :numerus ()
     (should (equal (zk--processor/gr "a-0000")
                    (zk--processor "a-0000")))
     (should (equal (zk--processor/gr '("a-0000" "c-4317"))
@@ -328,7 +328,7 @@ ARG can be zk-file or zk-id as string or list, single or multiple."
 (ert-deftest zk--alist ()
   "Make sure `zk--alist' generates the correct structure."
   :tags '(:disabled)                    ; zk-note
-  (__with-zk-environment :standard ()
+  (with-zk-test-environment :standard ()
     (let* ((alist (zk--alist (zk--directory-files)))
            (note (cdr (assoc "201004292342" alist))))
       (should (zk--note-p note))
@@ -343,8 +343,8 @@ ARG can be zk-file or zk-id as string or list, single or multiple."
 ;;;=============================================================================
 
 (ert-deftest zk--id-file ()
-  (__with-zk-environment :standard
-    ((file (car (__zk-sample-files-for :standard))))
+  (with-zk-test-environment :standard
+    ((file (car (zk-test-sample-files-for :standard))))
     (should (string= (file-name-base (zk--id-file "202206052002"))
                      (file-name-base file)))))
 
@@ -353,8 +353,8 @@ ARG can be zk-file or zk-id as string or list, single or multiple."
 ;;;=============================================================================
 
 (ert-deftest zk--parse-id ()
-  (__with-zk-environment :standard
-    ((file (car (__zk-sample-files-for :standard))))
+  (with-zk-test-environment :standard
+    ((file (car (zk-test-sample-files-for :standard))))
     (should (string= (file-name-base (zk--parse-id 'file-path "202206052002"))
                      (file-name-base file)))
     (should (string= (zk--parse-id 'title "202206052002")
@@ -417,8 +417,8 @@ in an internal loop."
         return)))))
 
 (ert-deftest rb/zk--parse-id ()
-  (__with-zk-environment :standard
-    ((file (car (__zk-sample-files-for :standard))))
+  (with-zk-test-environment :standard
+    ((file (car (zk-test-sample-files-for :standard))))
     (should (string= (file-name-base (rb/zk--parse-id 'file-path "202206052002"))
                      (file-name-base file)))
     (should (string= (rb/zk--parse-id 'title "202206052002")
@@ -427,9 +427,9 @@ in an internal loop."
 
 (ert-deftest benchmark/zk--parse-id ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "__reload-zk")
+  (ert-run-tests-batch "zk-test-reload-zk")
   (garbage-collect)
-  (__with-zk-environment :standard ()
+  (with-zk-test-environment :standard ()
     (should (benchmark-run 100 (gr/zk--parse-id 'file-path "202206052002")))
     (should (benchmark-run 100 (zk--parse-id 'file-path "202206052002")))))
 
@@ -438,7 +438,7 @@ in an internal loop."
 ;;;=============================================================================
 
 (ert-deftest zk-index-query-files ()
-  (__with-zk-environment :numerus ()
+  (with-zk-test-environment :numerus ()
     (switch-to-buffer zk-index-buffer-name)
     (zk-index-refresh)
     (should (= 14 (length (zk-index-query-files "humor" 'zk-index-focus))))
@@ -447,8 +447,8 @@ in an internal loop."
 
 (ert-deftest benchmark/zk-index-query-files ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "__reload-zk")
-  (__with-zk-environment :numerus ()
+  (ert-run-tests-batch "zk-test-reload-zk")
+  (with-zk-test-environment :numerus ()
     (switch-to-buffer zk-index-buffer-name)
     (should (benchmark-run 10           ; (26.718512 80 9.696325000000002)
               (zk-index-refresh)
@@ -461,8 +461,8 @@ in an internal loop."
 
 (ert-deftest benchmark/rb/zk-index-query-files ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "__reload-zk")
-  (__with-zk-environment :numerus ()
+  (ert-run-tests-batch "zk-test-reload-zk")
+  (with-zk-test-environment :numerus ()
     (switch-to-buffer zk-index-buffer-name)
     (should (benchmark-run 10           ; (21.83563 70 9.479023999999995)
               (zk-index-refresh)
@@ -499,7 +499,7 @@ in an internal loop."
     (should (benchmark 10000 (zk--posix-regexp all)))))
 
 (ert-deftest zk--grep-commands ()
-  (__with-zk-environment :scriptum ()
+  (with-zk-test-environment :scriptum ()
     (should (= 13 (length (zk--grep-id-list "Taiwan"))))
     (should (= 13 (length (zk--grep-file-list "Taiwan"))))
     (should (= 13 (length (zk--grep-file-list "Taiwan"))))
@@ -508,7 +508,7 @@ in an internal loop."
     ;; tags
     (should (equal '("#1" "#2" "#3" "#diss" "#metro2033" "#split" "#todo" "#102")
                    (zk--grep-tag-list))))
-  (__with-zk-environment :numerus ()
+  (with-zk-test-environment :numerus ()
     (should (= (length (zk--backlinks-list "t-7019")) 13)) ; Yomi Braester [[t-7019]]
     (should (= (length (zk--backlinks-list "y-7690")) 1)))) ; Lee Yu-lin [[y-7690]]
 
@@ -518,9 +518,9 @@ in an internal loop."
 
 (ert-deftest bm/zk--alist ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "__reload-zk")
+  (ert-run-tests-batch "zk-test-reload-zk")
   (garbage-collect)
-  (__with-zk-environment :standard ()
+  (with-zk-test-environment :standard ()
     (should (benchmark-run 100 (zk--alist)))
     (let ((files (zk--directory-files)))
       (should (null (benchmark-run 100 (zk--alist files)))))))
@@ -530,8 +530,8 @@ in an internal loop."
 
 (ert-deftest bm/zk--generate-id ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "__reload-zk")
-  (__with-zk-environment :standard ()
+  (ert-run-tests-batch "zk-test-reload-zk")
+  (with-zk-test-environment :standard ()
     (should (null
              (benchmark-run 100
                (zk--generate-id))))))
@@ -539,9 +539,9 @@ in an internal loop."
 (ert-deftest bm/zk--parse-id ()
   :tags '(:benchmark)
   ;;; 100 on :numerus with 3829 files (14.105008 24 2.713031)
-  (ert-run-tests-batch "__reload-zk")
+  (ert-run-tests-batch "zk-test-reload-zk")
   (garbage-collect)
-  (__with-zk-environment :numerus ()
+  (with-zk-test-environment :numerus ()
     (should (null
              (benchmark-run 100
                (zk--parse-id 'file-path "l-0614"))))))
@@ -565,10 +565,10 @@ an internal loop."
 
 (ert-deftest bm/zk--id-list ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "__reload-zk")
+  (ert-run-tests-batch "zk-test-reload-zk")
   (garbage-collect)
   (let (results)
-    (__with-zk-environment :numerus ()
+    (with-zk-test-environment :numerus ()
       (push (cons "NEW: (no args)" (benchmark-run 10 (zk--id-list))) results)
       (push (cons "OLD: (no args)" (benchmark-run 10 (zk--id-list/gr))) results)
       (push (cons "NEW: str" (benchmark-run 10 (zk--id-list "testing"))) results)
@@ -581,9 +581,9 @@ an internal loop."
 (ert-deftest bm/zk--wildcard-file-path ()
   :tags '(:benchmark)
   ;; 100 on :numerus with 3829 files (0.092291 0 0.0)
-  (ert-run-tests-batch "__reload-zk")
+  (ert-run-tests-batch "zk-test-reload-zk")
   (garbage-collect)
-  (__with-zk-environment :numerus ()
+  (with-zk-test-environment :numerus ()
     (should (string= (zk--wildcard-file-path "g-9172")
                      "/Users/richard/Zettelkasten/numerus/g/g-9172 {λ} size of a thought @Kuehn.txt"))
     (should (null
@@ -593,9 +593,9 @@ an internal loop."
 (ert-deftest bm/zk-insert-link ()
   :tags '(:benchmark)
   ;;; 100 on :numerus with 4502 files
-  ;;(ert-run-tests-batch "__reload-zk")
+  ;;(ert-run-tests-batch "zk-test-reload-zk")
   (garbage-collect)
-  (__with-zk-environment :numerus ()
+  (with-zk-test-environment :numerus ()
     (with-temp-buffer
       (should (null
                (benchmark-run 100
@@ -608,8 +608,8 @@ an internal loop."
   (elp-instrument-package "zk")
   (fset 'five-completions
         (kmacro-lambda-form  0 "%d"))
-  (__with-zk-environment :standard
-    ((file (car (__zk-sample-files-for :standard)))
+  (with-zk-test-environment :standard
+    ((file (car (zk-test-sample-files-for :standard)))
      (five-completions [?\[ ?\[ ?m ?e ?m ?o tab tab return
                             ?\[ ?\[ ?t ?r ?p ?g tab return
                             ?\[ ?\[ ?w ?o ?m ?e ?n tab tab return
@@ -635,14 +635,14 @@ an internal loop."
 (ert-deftest bm/zk-index ()
   :tags '(:benchmark)
   (elp-instrument-package "zk")
-  (__with-zk-environment
+  (with-zk-test-environment
       :standard
       ((reps 10)
        (commit (or (ignore-errors
                      (string-trim
                       (shell-command-to-string "git rev-parse --short HEAD")))
                    (read-string "Commit: ")))
-       (file (car (__zk-sample-files-for :standard)))
+       (file (car (zk-test-sample-files-for :standard)))
        (time (format-time-string "%F %R"))
        (lines)
      (results))
