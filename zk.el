@@ -335,6 +335,27 @@ Group 2 is the title."
   (when (string-match (zk-file-name-regexp) file)
     (match-string-no-properties 1 file)))
 
+(defun zk--id-file (id)
+  "Return the full file path for the existing zk note with ID.
+Use wildcards to match files against the ID, signalling an error if
+there are multiple matches (so ID is not unique). If there are no
+matches, return nil."
+  (let* ((wild-base-name (format "%s*.%s" id zk-file-extension))
+         (matches (file-expand-wildcards
+                   (concat (file-name-as-directory zk-directory)
+                           (when (functionp zk-subdirectory-function)
+                             (file-name-as-directory
+                              (funcall zk-subdirectory-function id)))
+                           wild-base-name))))
+    (cond ((zk--singleton-p matches)
+           (expand-file-name (car matches)))
+          ((null matches)
+           nil)
+          (t
+           (error "There are multiple (%d) files with ID %s"
+                  (length matches)
+                  id)))))
+
 (defun zk-file-p (&optional file strict)
   "Return t if FILE is a zk-file.
 If FILE is not given, get it from variable `buffer-file-name'.
@@ -551,46 +572,20 @@ supplied. Can take a PROMPT argument."
          ,file)))
    (zk--directory-files t)))
 
-(defun zk--parse-id (target ids &optional zk-alist)
-  "Return TARGET, either `file-path or `title, from files with IDS.
-Takes a single ID, as a string, or a list of IDs. Takes an
-optional ZK-ALIST, for efficiency if `zk--parse-id' is called
-in an internal loop."
-  (cond
-   ((and (eq target 'file-path)
-         (stringp ids))
-    (car (zk--directory-files t ids)))
-   ((and (eq target 'file-path)
-         (zk--singleton-p ids))
-    (car (zk--directory-files t (car ids))))
-   (t
-    (let* ((zk-alist (or zk-alist
-                         (zk--alist)))
-           (zk-id-list (zk--id-list))
-           (return
-            (cond ((eq target 'file-path)
-                   (cond ((stringp ids)
-                          (if (member ids zk-id-list)
-                              (cddr (assoc ids zk-alist))
-                            (user-error "No file associated with %s" ids)))
-                         ((listp ids)
-                          (mapcar
-                           (lambda (x)
-                             (caddr (assoc x zk-alist)))
-                           ids))))
-                  ((eq target 'title)
-                   (cond ((stringp ids)
-                          (if (member ids zk-id-list)
-                              (cadr (assoc ids zk-alist))
-                            (user-error "No file associated with %s" ids)))
-                         ((listp ids)
-                          (mapcar
-                           (lambda (x)
-                             (cadr (assoc x zk-alist)))
-                           ids)))))))
-      (if (zk--singleton-p return)
-          (car return)
-        return)))))
+(defun zk--parse-id (target id &optional zk-alist)
+  "Return TARGET, either `file-path or `title, from file with ID.
+Takes a single ID, as a string. Takes an optional ZK-ALIST, for
+backward compatibility, but ignores it in favor of checking against
+the file system directly via `zk--id-file'."
+  (let ((file (zk--id-file id)))
+    (cond ((eq target 'file-path)
+           file)
+          ((eq target 'title)
+           (if (string-match (zk-file-name-regexp) (file-name-nondirectory file))
+               (match-string 2 (file-name-nondirectory file))
+             (error "Cannot figure out title for file with ID %s: %s"
+                    id (file-name-nondirectory file))))
+          (t (error "Invalid target: %s" target)))))
 
 (defun zk--parse-file (target files)
   "Return TARGET, either `id or `title, from FILES.
@@ -619,23 +614,20 @@ file extension."
 ;;; Formatting
 
 (defun zk--processor (arg)
-  "Return list of files.
-ARG can be zk-file or zk-id as string or list, single or multiple."
+  "Process ARG into a list of zk-files.
+ARG can be a string (zk-file or zk-id) or a list of such strings."
   (let* ((zk-alist (zk--alist))
-         (files (cond
-                 ((stringp arg)
-                  (if (zk-file-p arg)
-                      (list arg)
-                    (list (zk--parse-id 'file-path arg zk-alist))))
-                 ((zk--singleton-p arg)
-                  (if (zk-file-p (car arg))
-                      arg
-                    (list (zk--parse-id 'file-path (car arg) zk-alist))))
-                 (t
-                  (if (zk-file-p (car arg))
-                      arg
-                    (zk--parse-id 'file-path arg zk-alist))))))
-    files))
+         (process-single-arg
+          (lambda (single-arg)
+            (if (zk-file-p single-arg)
+                single-arg
+              (zk--parse-id 'file-path single-arg zk-alist)))))
+    (cond ((stringp arg)                ; Single zk-file or zk-id as string
+           (list (funcall process-single-arg arg)))
+          ((listp arg)                  ; List of zk-files or zk-ids
+           (mapcar process-single-arg arg))
+          (t
+           (signal 'wrong-type-argument (list 'list-or-string-p arg))))))
 
 (defun zk--formatter (arg format &optional no-proc)
   "Return formatted list from FILES, according to FORMAT.
@@ -882,27 +874,25 @@ Optionally call a custom function by setting the variable
 (defun zk--links-in-note-list ()
   "Return list of zk files that are linked from the current buffer."
   (let* ((zk-alist (zk--alist))
-         (zk-ids (zk--id-list))
+         (zk-ids (zk--id-list nil zk-alist))
          id-list)
     (save-buffer)
     (save-excursion
       (goto-char (point-min))
       (while (re-search-forward (zk-link-regexp) nil t)
-        (if (member (match-string-no-properties 1) zk-ids)
-            (push (match-string-no-properties 1) id-list))))
-    (cond ((zk--singleton-p id-list)
-           (list (zk--parse-id 'file-path id-list zk-alist)))
-          (id-list
-           (zk--parse-id 'file-path (delete-dups id-list) zk-alist))
-          (t
-           (error "No zk-links in note")))))
-
+        (when (member (match-string-no-properties 1) zk-ids)
+          (push (match-string-no-properties 1) id-list))))
+    (if id-list
+        (mapcar (lambda (id)
+                  (zk--parse-id 'file-path id zk-alist))
+                (delete-dups id-list))
+      (error "No zk-links in note"))))
 
 ;;;###autoload
 (defun zk-links-in-note ()
   "Select from list of notes linked to in the current note."
   (interactive)
-  (let* ((files (zk--links-in-note-list)))
+  (let* ((files (ignore-errors (zk--links-in-note-list))))
     (if files
         (find-file (funcall zk-select-file-function "Links: " files))
       (user-error "No links found"))))
@@ -1097,7 +1087,7 @@ Select TAG, with completion, from list of all tags in zk notes."
   "Find unlinked notes."
   (interactive)
   (let* ((ids (zk--unlinked-notes-list))
-         (notes (zk--parse-id 'file-path ids)))
+         (notes (mapcar (lambda (id) (zk--parse-id 'file-path id)) ids)))
     (if notes
         (find-file (funcall zk-select-file-function "Unlinked notes: " notes))
       (user-error "No unlinked notes found"))))

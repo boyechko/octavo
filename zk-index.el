@@ -392,8 +392,8 @@ items listed first.")
                   (zk--grep-id-list regexp))))
          (ids (mapcar (lambda (x) (when (member x scope) x))
                       query))
-         (files (zk--parse-id 'file-path (remq nil ids))))
-    (add-to-history 'zk-search-history regexp)
+         (files (mapcar (lambda (id) (zk--parse-id 'file-path id)) ids)))
+    (add-to-history 'zk-search-history string)
     (when files
       (let ((mode-line (zk-index-query-mode-line command regexp)))
         (setq zk-index-query-mode-line mode-line)
@@ -525,8 +525,9 @@ with query term STRING."
 (defun zk-index--current-file-list ()
   "Return list files in current index."
   (let* ((ids (zk-index--current-id-list (buffer-name)))
-         (files (zk--parse-id 'file-path ids)))
-    files))
+         (files (mapcar (lambda (id) (zk--parse-id 'file-path id)) ids)))
+    (when files
+      files)))
 
 (defun zk-index--sort-created (list)
   "Sort LIST for latest created."
