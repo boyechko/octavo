@@ -393,7 +393,7 @@ items listed first.")
          (ids (mapcar (lambda (x) (when (member x scope) x))
                       query))
          (files (mapcar (lambda (id) (zk--parse-id 'file-path id)) ids)))
-    (add-to-history 'zk-search-history string)
+    (add-to-history 'zk-search-history regexp)
     (when files
       (let ((mode-line (zk-index-query-mode-line command regexp)))
         (setq zk-index-query-mode-line mode-line)
