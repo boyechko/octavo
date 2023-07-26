@@ -633,6 +633,108 @@ in an internal loop."
     (should (= (length (zk--backlinks-list "t-7019")) 13)) ; Yomi Braester [[t-7019]]
     (should (= (length (zk--backlinks-list "y-7690")) 1)))) ; Lee Yu-lin [[y-7690]]
 
+;;;=============================================================================
+;;; zk--id-list (2023-07-16)
+;;;=============================================================================
+
+(defun zk--id-list/orig (&optional str zk-alist) ; 2023-07-16
+  "Return a list of zk IDs for notes in `zk-directory'.
+Optional search for STR in note title, case-insenstive. Takes an
+optional ZK-ALIST, for efficiency if `zk--id-list' is called in
+an internal loop."
+  (if str
+      (let ((zk-alist (or zk-alist (zk--alist)))
+            (case-fold-search t)
+            (ids))
+        (dolist (item zk-alist)
+          (if str
+              (when (string-match str (cadr item))
+                (push (car item) ids))
+            (push (car item) ids)))
+        ids)
+    (zk--parse-file 'id (zk--directory-files t))))
+
+(ert-deftest zk--id-list ()
+  :tags '()
+  (with-zk-test-environment :tempus ()
+    (should (= (length (zk--id-list)) (length (zk--id-list/orig)))) ; no args
+    (should (= (length (zk--id-list "yomi")) (length (zk--id-list/orig "yomi")))) ; str
+    (let ((zk-alist (zk--alist)))
+      (should (= (length (zk--id-list nil zk-alist))
+                 (length (zk--id-list/orig nil zk-alist)))) ; zk-alist
+      (should (= (length (zk--id-list "yomi" zk-alist))
+                 (length (zk--id-list/orig "yomi" zk-alist)))) ; zk-alist + str
+      (should (= (length (zk--id-list "^2014" zk-alist))
+                 (length (zk--id-list/orig "^2014" zk-alist))))
+      )))
+
+(defmacro zk-test-benchmark-run (n description &rest forms)
+  "Call `benchmark-run' on FORMS with N reptitions, and formatted string.
+The return consists of DESCRIPTION and return of
+`benchmark-run'; if DESCRIPTION is nil, use FORMS."
+  (declare (indent 2))
+  `(progn
+     (garbage-collect)
+     (format "%45s in %s"
+             (format "%-40S => %5d results"
+                     (or ,description (quote ,forms))
+                     (length ,@forms))
+             (cl-destructuring-bind (time gcs gc-time)
+                 (benchmark-run n ,@forms)
+               (format "%0.2f sec (inc. %0.2f sec for %d GCs)"
+                       time gc-time time)))))
+
+(ert-deftest bm/zk--id-list+search-ids ()
+  :tags '(:benchmark)
+  (ert-run-tests-batch "zk-test-reload-zk")
+  (garbage-collect)
+  (let ((n 10)
+        results)
+    (unwind-protect
+        (with-zk-test-environment :tempus ()
+          (push (zk-test-benchmark-run n nil (zk--id-list/orig)) results)
+          (push (zk-test-benchmark-run n nil (zk--id-list)) results)
+          (let ((zk-alist (zk--alist)))
+            (push (zk-test-benchmark-run n nil (zk--id-list/orig nil zk-alist)) results)
+            (push (zk-test-benchmark-run n nil (zk--id-list nil zk-alist)) results)
+            (push (zk-test-benchmark-run n nil (zk--id-list/orig "yomi" zk-alist)) results)
+            (push (zk-test-benchmark-run n nil (zk--id-list "yomi" zk-alist)) results)))
+      (with-current-buffer (get-buffer-create "*ERT Results*")
+        (goto-char (point-max))
+        (insert (format "\n\n=== %s (%d reps) at %s ===\n"
+                        "bm/zk--id-list+search-ids" n
+                        (format-time-string "%F %R")))
+        (insert (mapconcat #'identity (nreverse results) "\n"))
+        (goto-char (point-max)))
+      (switch-to-buffer-other-window "*ERT Results*"))))
+
+(ert-deftest bm/zk--id-list+use-zk-alist ()
+  :tags '(:benchmark)
+  (ert-run-tests-batch "zk-test-reload-zk")
+  (garbage-collect)
+  (let ((n 10)
+        results)
+    (unwind-protect
+        (with-zk-test-environment :tempus ()
+          (push (zk-test-benchmark-run n nil (zk--id-list/orig)) results)
+          (push (zk-test-benchmark-run n nil (zk--id-list)) results)
+          (push (zk-test-benchmark-run n nil (zk--id-list/orig "yomi")) results)
+          (push (zk-test-benchmark-run n nil (zk--id-list "yomi")) results)
+          (push (zk-test-benchmark-run n nil (zk--id-list/orig "^2014")) results)
+          (push (zk-test-benchmark-run n nil (zk--id-list "^2014")) results)
+          (let ((zk-alist (zk--alist)))
+            (push (zk-test-benchmark-run n nil (zk--id-list/orig nil zk-alist)) results)
+            (push (zk-test-benchmark-run n nil (zk--id-list nil zk-alist)) results)
+            (push (zk-test-benchmark-run n nil (zk--id-list/orig "yomi" zk-alist)) results)
+            (push (zk-test-benchmark-run n nil (zk--id-list "yomi" zk-alist)) results)))
+      (with-current-buffer (get-buffer-create "*ERT Results*")
+        (goto-char (point-max))
+        (insert (format "\n\n=== %s (%d reps) at %s ===\n"
+                        "bm/zk--id-list+use-zk-alist" n
+                        (format-time-string "%F %R")))
+        (insert (mapconcat #'identity (nreverse results) "\n"))
+        (goto-char (point-max)))
+      (switch-to-buffer-other-window "*ERT Results*"))))
 
 (provide 'test-zk)
 ;;; tests-zk.el ends here
