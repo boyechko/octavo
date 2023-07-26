@@ -338,6 +338,127 @@ ARG can be zk-file or zk-id as string or list, single or multiple."
       (should (string= "201004292342 {Talk} Lauren Berlant, 'On the Desire for the Political' @ PSU.txt"
                        (zk--note-file note))))))
 
+(ert-deftest bm/zk--alist ()
+  :tags '(:benchmark)
+  (ert-run-tests-batch "zk-test-reload-zk")
+  (garbage-collect)
+  (with-zk-test-environment :standard ()
+    (should (benchmark-run 100 (zk--alist)))
+    (let ((files (zk--directory-files)))
+      (should (null (benchmark-run 100 (zk--alist files)))))))
+
+;;; 100 (zk--alist) on :standard (6.449468 12 1.1682259999999998)
+;;; 100 (zk--alist files) on :standard (4.3255930000000005 11 1.0541220000000004)
+
+;;;=============================================================================
+;;; Benchmarks
+;;;=============================================================================
+
+(ert-deftest bm/zk--generate-id ()
+  :tags '(:benchmark)
+  (ert-run-tests-batch "zk-test-reload-zk")
+  (with-zk-test-environment :standard ()
+    (should (null
+             (benchmark-run 100
+               (zk--generate-id))))))
+
+(ert-deftest bm/zk--parse-id ()
+  :tags '(:benchmark)
+  ;;; 100 on :numerus with 3829 files (14.105008 24 2.713031)
+  (ert-run-tests-batch "zk-test-reload-zk")
+  (garbage-collect)
+  (with-zk-test-environment :numerus ()
+    (should (null
+             (benchmark-run 100
+               (zk--parse-id 'file-path "l-0614"))))))
+
+(ert-deftest bm/zk--wildcard-file-path ()
+  :tags '(:benchmark)
+  ;; 100 on :numerus with 3829 files (0.092291 0 0.0)
+  (ert-run-tests-batch "zk-test-reload-zk")
+  (garbage-collect)
+  (with-zk-test-environment :numerus ()
+    (should (string= (zk--wildcard-file-path "g-9172")
+                     "/Users/richard/Zettelkasten/numerus/g/g-9172 {λ} size of a thought @Kuehn.txt"))
+    (should (null
+             (benchmark-run 100
+               (zk--wildcard-file-path "g-9172"))))))
+
+(ert-deftest bm/zk-insert-link ()
+  :tags '(:benchmark)
+  ;;; 100 on :numerus with 4502 files
+  ;;(ert-run-tests-batch "zk-test-reload-zk")
+  (garbage-collect)
+  (with-zk-test-environment :numerus ()
+    (with-temp-buffer
+      (should (null
+               (benchmark-run 100
+                 (zk-insert-link "l-0614")
+                 (insert "\n")))))))
+
+(ert-deftest bm/zk-completion-at-point ()
+  :tags '(:benchmark)
+  (elp-reset-all)
+  (elp-instrument-package "zk")
+  (fset 'five-completions
+        (kmacro-lambda-form  0 "%d"))
+  (with-zk-test-environment :standard
+    ((file (car (zk-test-sample-files-for :standard)))
+     (five-completions [?\[ ?\[ ?m ?e ?m ?o tab tab return
+                            ?\[ ?\[ ?t ?r ?p ?g tab return
+                            ?\[ ?\[ ?w ?o ?m ?e ?n tab tab return
+                            ?\[ ?\[ ?m ?e ?n tab tab return
+                            ?\[ ?\[ ?a ?n ?o ?t ?h ?e ?r tab tab return]))
+    (switch-to-buffer-other-window (generate-new-buffer "*Test*"))
+    (org-mode)
+    (add-to-list 'completion-at-point-functions #'zk-completion-at-point)
+    (dotimes (n 10)
+      (execute-kbd-macro five-completions)))
+  (let ((commit (read-string "Commit: "))
+        (time (format-time-string "%F %R"))
+        (files (length (zk--directory-files))))
+    (elp-results)
+    (with-current-buffer (get-buffer "*ELP Profiling Results*")
+      (let ((inhibit-read-only t))
+        (goto-char (point-max))
+        (insert
+         (format ";;; %s on %s with %d files\n" time commit files)))
+      (write-file (format "%s on %s.txt" time commit)))
+    (elp-restore-all)))
+
+(ert-deftest bm/zk-index ()
+  :tags '(:benchmark)
+  (elp-instrument-package "zk")
+  (with-zk-test-environment
+      :standard
+      ((reps 10)
+       (commit (or (ignore-errors
+                     (string-trim
+                      (shell-command-to-string "git rev-parse --short HEAD")))
+                   (read-string "Commit: ")))
+       (file (car (zk-test-sample-files-for :standard)))
+       (time (format-time-string "%F %R"))
+       (lines)
+     (results))
+    (setq results
+      (benchmark-run reps
+        (should (string= (zk--parse-file 'id file) "202206052002"))
+        (should (string= (zk--parse-file 'title file)
+                         "{Event} WaterBear Film Screening Series at Minim"))
+        (zk-index)
+        (with-current-buffer zk-index-buffer-name
+          (setq lines (count-lines (point-min) (point-max))))
+        (kill-buffer zk-index-buffer-name)))
+    (elp-results)
+    (with-current-buffer (get-buffer "*ELP Profiling Results*")
+      (let ((inhibit-read-only t))
+        (goto-char (point-max))
+        (insert
+         (format ";;; %s on %s\n;;; %d rep(s), %d files: %s\n"
+                 time commit
+                 reps lines results)))
+      (write-file (format "%s on %s.txt" time commit)))))
+
 ;;;=============================================================================
 ;;; zk--id-file (2023-06-30)
 ;;;=============================================================================
@@ -512,158 +633,6 @@ in an internal loop."
     (should (= (length (zk--backlinks-list "t-7019")) 13)) ; Yomi Braester [[t-7019]]
     (should (= (length (zk--backlinks-list "y-7690")) 1)))) ; Lee Yu-lin [[y-7690]]
 
-;;;=============================================================================
-;;; Benchmarks
-;;;=============================================================================
-
-(ert-deftest bm/zk--alist ()
-  :tags '(:benchmark)
-  (ert-run-tests-batch "zk-test-reload-zk")
-  (garbage-collect)
-  (with-zk-test-environment :standard ()
-    (should (benchmark-run 100 (zk--alist)))
-    (let ((files (zk--directory-files)))
-      (should (null (benchmark-run 100 (zk--alist files)))))))
-
-;;; 100 (zk--alist) on :standard (6.449468 12 1.1682259999999998)
-;;; 100 (zk--alist files) on :standard (4.3255930000000005 11 1.0541220000000004)
-
-(ert-deftest bm/zk--generate-id ()
-  :tags '(:benchmark)
-  (ert-run-tests-batch "zk-test-reload-zk")
-  (with-zk-test-environment :standard ()
-    (should (null
-             (benchmark-run 100
-               (zk--generate-id))))))
-
-(ert-deftest bm/zk--parse-id ()
-  :tags '(:benchmark)
-  ;;; 100 on :numerus with 3829 files (14.105008 24 2.713031)
-  (ert-run-tests-batch "zk-test-reload-zk")
-  (garbage-collect)
-  (with-zk-test-environment :numerus ()
-    (should (null
-             (benchmark-run 100
-               (zk--parse-id 'file-path "l-0614"))))))
-
-(defun zk--id-list/gr (&optional str zk-alist)
-  "Return a list of zk IDs for notes in `zk-directory'.
-Optional search for STR in note title, case-insenstive. Takes an
-optional ZK-ALIST, for efficiency if `zk--id-list' is called in
-an internal loop."
-  (if str
-      (let ((zk-alist (or zk-alist (zk--alist)))
-            (case-fold-search t)
-            (ids))
-        (dolist (item zk-alist)
-          (if str
-              (when (string-match str (cadr item))
-                (push (car item) ids))
-            (push (car item) ids)))
-        ids)
-    (zk--parse-file 'id (zk--directory-files t))))
-
-(ert-deftest bm/zk--id-list ()
-  :tags '(:benchmark)
-  (ert-run-tests-batch "zk-test-reload-zk")
-  (garbage-collect)
-  (let (results)
-    (with-zk-test-environment :numerus ()
-      (push (cons "NEW: (no args)" (benchmark-run 10 (zk--id-list))) results)
-      (push (cons "OLD: (no args)" (benchmark-run 10 (zk--id-list/gr))) results)
-      (push (cons "NEW: str" (benchmark-run 10 (zk--id-list "testing"))) results)
-      (push (cons "OLD: str" (benchmark-run 10 (zk--id-list/gr "testing"))) results)
-      (let ((zk-alist (zk--alist)))
-        (push (cons "NEW: zk-alist" (benchmark-run 10 (zk--id-list nil zk-alist))) results)
-        (push (cons "OLD: zk-alist" (benchmark-run 10 (zk--id-list/gr nil zk-alist))) results)))
-    (should-not (nreverse results))))
-
-(ert-deftest bm/zk--wildcard-file-path ()
-  :tags '(:benchmark)
-  ;; 100 on :numerus with 3829 files (0.092291 0 0.0)
-  (ert-run-tests-batch "zk-test-reload-zk")
-  (garbage-collect)
-  (with-zk-test-environment :numerus ()
-    (should (string= (zk--wildcard-file-path "g-9172")
-                     "/Users/richard/Zettelkasten/numerus/g/g-9172 {λ} size of a thought @Kuehn.txt"))
-    (should (null
-             (benchmark-run 100
-               (zk--wildcard-file-path "g-9172"))))))
-
-(ert-deftest bm/zk-insert-link ()
-  :tags '(:benchmark)
-  ;;; 100 on :numerus with 4502 files
-  ;;(ert-run-tests-batch "zk-test-reload-zk")
-  (garbage-collect)
-  (with-zk-test-environment :numerus ()
-    (with-temp-buffer
-      (should (null
-               (benchmark-run 100
-                 (zk-insert-link "l-0614")
-                 (insert "\n")))))))
-
-(ert-deftest bm/zk-completion-at-point ()
-  :tags '(:benchmark)
-  (elp-reset-all)
-  (elp-instrument-package "zk")
-  (fset 'five-completions
-        (kmacro-lambda-form  0 "%d"))
-  (with-zk-test-environment :standard
-    ((file (car (zk-test-sample-files-for :standard)))
-     (five-completions [?\[ ?\[ ?m ?e ?m ?o tab tab return
-                            ?\[ ?\[ ?t ?r ?p ?g tab return
-                            ?\[ ?\[ ?w ?o ?m ?e ?n tab tab return
-                            ?\[ ?\[ ?m ?e ?n tab tab return
-                            ?\[ ?\[ ?a ?n ?o ?t ?h ?e ?r tab tab return]))
-    (switch-to-buffer-other-window (generate-new-buffer "*Test*"))
-    (org-mode)
-    (add-to-list 'completion-at-point-functions #'zk-completion-at-point)
-    (dotimes (n 10)
-      (execute-kbd-macro five-completions)))
-  (let ((commit (read-string "Commit: "))
-        (time (format-time-string "%F %R"))
-        (files (length (zk--directory-files))))
-    (elp-results)
-    (with-current-buffer (get-buffer "*ELP Profiling Results*")
-      (let ((inhibit-read-only t))
-        (goto-char (point-max))
-        (insert
-         (format ";;; %s on %s with %d files\n" time commit files)))
-      (write-file (format "%s on %s.txt" time commit)))
-    (elp-restore-all)))
-
-(ert-deftest bm/zk-index ()
-  :tags '(:benchmark)
-  (elp-instrument-package "zk")
-  (with-zk-test-environment
-      :standard
-      ((reps 10)
-       (commit (or (ignore-errors
-                     (string-trim
-                      (shell-command-to-string "git rev-parse --short HEAD")))
-                   (read-string "Commit: ")))
-       (file (car (zk-test-sample-files-for :standard)))
-       (time (format-time-string "%F %R"))
-       (lines)
-     (results))
-    (setq results
-      (benchmark-run reps
-        (should (string= (zk--parse-file 'id file) "202206052002"))
-        (should (string= (zk--parse-file 'title file)
-                         "{Event} WaterBear Film Screening Series at Minim"))
-        (zk-index)
-        (with-current-buffer zk-index-buffer-name
-          (setq lines (count-lines (point-min) (point-max))))
-        (kill-buffer zk-index-buffer-name)))
-    (elp-results)
-    (with-current-buffer (get-buffer "*ELP Profiling Results*")
-      (let ((inhibit-read-only t))
-        (goto-char (point-max))
-        (insert
-         (format ";;; %s on %s\n;;; %d rep(s), %d files: %s\n"
-                 time commit
-                 reps lines results)))
-      (write-file (format "%s on %s.txt" time commit)))))
 
 (provide 'test-zk)
 ;;; tests-zk.el ends here
