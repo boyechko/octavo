@@ -830,10 +830,13 @@ title."
 ;;; Find File
 
 ;;;###autoload
-(defun zk-find-file ()
-  "Find file in `zk-directory'."
-  (interactive)
-  (find-file (funcall zk-select-file-function "Find file: ")))
+(defun zk-find-file (&optional other-window)
+  "Find file in `zk-directory'.
+If OTHER-WINDOW is non-nil (or command is executed with
+\\[universal-argument]), find file in other window."
+  (interactive "P")
+  (funcall (if other-window 'find-file-other-window 'find-file)
+           (funcall zk-select-file-function "Find file: ")))
 
 ;;;###autoload
 (defun zk-find-file-by-id (id)
