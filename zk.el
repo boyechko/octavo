@@ -784,7 +784,7 @@ Optionally use ORIG-ID for backlink."
   (when (ignore-errors (zk--parse-id 'title orig-id)) ;; check for file
     (progn
       (insert "===\n<- ")
-      (zk--insert-link-and-title orig-id (zk--parse-id 'title orig-id))
+      (zk--insert-link orig-id (zk--parse-id 'title orig-id))
       (newline)))
   (insert "===\n\n"))
 
@@ -919,27 +919,23 @@ for additional configurations. Optional TITLE."
       (cond
        ((or (and (not pref) (eq 't zk-link-and-title))
             (and pref (not zk-link-and-title)))
-        (zk--insert-link-and-title arg title))
+        (zk--insert-link arg title))
        ((and (not pref) (eq 'ask zk-link-and-title))
         (if (y-or-n-p "Include title? ")
-            (zk--insert-link-and-title arg title)
+            (zk--insert-link arg title)
           (zk--insert-link arg)))
        ((or t
             (and pref (eq 't zk-link-and-title)))
         (zk--insert-link arg))))))
 
-(defun zk--insert-link-and-title (arg &optional title)
-  "Insert link from ARG according to `zk-link-and-title-format'.
-Optional TITLE."
-  (if title
-      (insert (zk--format zk-link-and-title-format arg title))
-    (insert (zk--formatted-string arg zk-link-and-title-format))
-    (when zk-enable-link-buttons
-      (zk-make-link-buttons))))
-
-(defun zk--insert-link (id)
-  "Insert link to note with ID, with button optional."
-  (insert (zk--formatted-string id zk-link-format))
+(defun zk--insert-link (id &optional title)
+  "Insert link to note with ID and TITLE.
+If TITLE is non-nil, use `zk-link-and-title-format',
+otherwise `zk-link-format'."
+  (insert (zk--format (if title
+                          zk-link-and-title-format
+                        zk-link-format)
+                      id title))
   (when zk-enable-link-buttons
     (zk-make-link-buttons)))
 
