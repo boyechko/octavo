@@ -415,16 +415,17 @@ buttons and overlays."
         (t (user-error "No item to send to desktop"))))
 
 ;;;###autoload
-(defun zk-desktop-send-to-desktop (&optional items suffix)
+(defun zk-desktop-send-to-desktop (&optional items prefix suffix)
   "Add ITEMS to the current ZK-Desktop.
+New entries are inserted according to `zk-desktop-add-pos'.
 In ZK-Index, works on note at point or notes in active
 region. Also works on files or group of files in minibuffer,
-passed as ITEMS, and on Zk-ID at point. With non-nil SUFFIX,
-insert it after each entry. New entries are inserted
-according to `zk-desktop-add-pos'.
+passed as ITEMS, and on Zk-ID at point. With non-nil PREFIX
+and/or SUFFIX, use those rather than values defined in
+`zk-desktop-entry-prefix' and `zk-desktop-entry-suffix',
+respectively.
 
-See `zk-desktop-entry-format', `zk-desktop-entry-prefix',
-and `zk-desktop-entry-suffix' for the format of each line."
+See `zk-desktop-entry-format' for the format of each line."
   (interactive)
   (unless zk-desktop-directory
     (error "Please set `zk-desktop-directory' first"))
@@ -444,7 +445,7 @@ and `zk-desktop-entry-suffix' for the format of each line."
         ('prepend (goto-char (point-min)))
         ('at-point (goto-char (point))))
       (mapc (lambda (item)
-              (insert (concat zk-desktop-entry-prefix
+              (insert (concat (or prefix zk-desktop-entry-prefix)
                               item
                               (or suffix zk-desktop-entry-suffix)
                               "\n")))
