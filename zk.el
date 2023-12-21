@@ -693,11 +693,12 @@ the starting position of the button."
     'help-echo 'zk-button-help-echo))
 
 (defun zk-make-link-buttons ()
-  "Make `zk-link-regexp's in current buffer into zk-link buttons."
+  "Make Zk links in current buffer into `zk-link' buttons."
   (interactive)
-  (when (and (zk-file-p)
-             zk-enable-link-buttons)
-    (let ((ids (zk--id-list)))
+  (when (and (zk-file-p) zk-enable-link-buttons)
+    (remove-overlays (point-min) (point-max) 'type 'zk-link)
+    (let* ((zk-alist (zk--alist))
+           (ids (zk--id-list nil zk-alist)))
       (save-excursion
         (goto-char (point-min))
         (while (re-search-forward (zk-link-regexp) nil t)
@@ -705,7 +706,13 @@ the starting position of the button."
                 (end (match-end 1))
                 (id (match-string-no-properties 1)))
             (when (member id ids)
-              (make-button beg end 'type 'zk-link))))))))
+              ;; Since we have zk-alist handy, might as well set the buttons'
+              ;; help-echo to a static string rather than having `zk-button-
+              ;; help-echo' have to parse again.
+              (make-button beg end
+                           'type 'zk-link
+                            'help-echo
+                           (zk--parse-id 'title id zk-alist)))))))))
 
 (defun zk-make-button-before-point ()
   "Find `zk-link-regexp' before point and make it a zk-link button."
