@@ -537,19 +537,23 @@ Offers candidates from `zk--directory-files', or from LIST when
 supplied. Can take a PROMPT argument."
   (let* ((files (or list
                     (zk--directory-files t)))
+(defun zk--select-file (&optional prompt files group sort initial-input)
+  "Select a zk-file with `completing-read' showing PROMPT.
+Offers candidates from list of FILES, if supplied, or from
+`zk--directory-files'. INITIAL-INPUT, GROUP and SORT are
+passed to `completion-read'."
+  (let* ((files (or files (zk--directory-files 'full)))
          (group (or group 'zk--group-function))
          (sort (or sort nil)))
-    (completing-read
-     (or prompt
-         "Select File: ")
-     (lambda (string predicate action)
-       (if (eq action 'metadata)
-           `(metadata
-             (group-function . ,group)
-             (display-sort-function . ,sort)
-             (category . zk-file))
-         (complete-with-action action files string predicate)))
-     nil t nil 'zk-file-history)))
+    (completing-read (or prompt "Select Zettel: ")
+                     (lambda (string predicate action)
+                       (if (eq action 'metadata)
+                           `(metadata
+                             (group-function . ,group)
+                             (display-sort-function . ,sort)
+                             (category . zk-file))
+                         (complete-with-action action files string predicate)))
+                     nil t initial-input 'zk-file-history)))
 
 (defun zk--group-function (file transform)
   "TRANSFORM completion candidate FILE to note title."
