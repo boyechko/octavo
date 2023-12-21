@@ -679,17 +679,18 @@ Adds `zk-make-link-buttons' to `find-file-hook.'"
   (setq zk-enable-link-buttons t)
   (add-hook 'find-file-hook #'zk-make-link-buttons))
 
+(defun zk-button-help-echo (_win obj pos)
+  "Return a string of help-echo for `zk-link' button.
+_WIN is the current window; OBJ is the button itself; POS is
+the starting position of the button."
+  (zk--parse-id 'title (button-label (or obj (button-at pos)))))
+
 (eval-and-compile
   (define-button-type 'zk-link
     'action 'zk-follow-link-at-point
     'follow-link t
-    'help-echo (lambda (_win _obj pos)
-                 (format
-                  "%s"
-                  (zk--parse-id
-                   'title
-                   (button-label
-                    (button-at pos)))))))
+    'face 'zk-desktop-button
+    'help-echo 'zk-button-help-echo))
 
 (defun zk-make-link-buttons ()
   "Make `zk-link-regexp's in current buffer into zk-link buttons."
