@@ -153,8 +153,9 @@ insertion. See `zk-new-note-header' for an example."
   :type 'function)
 
 (defcustom zk-select-file-function #'zk--select-file
-  "Function for performing completing read.
-Must take an optional prompt and a list of files"
+  "Function `zk-select-file' uses for selecting a Zk file.
+Must take an optional prompt and a list of files. See also
+`zk--select-file' for the default implementation."
   :type 'function)
 
 (defcustom zk-tag-insert-function nil
@@ -531,12 +532,10 @@ If UNIQUE is non-nil, remove duplicate matches."
 What counts as a tag depends on `zk-tag-regexp'."
   (zk--grep-match-list zk-tag-regexp 'unique))
 
-(defun zk--select-file (&optional prompt list group sort)
-  "Wrapper around `completing-read' to select zk-file.
-Offers candidates from `zk--directory-files', or from LIST when
-supplied. Can take a PROMPT argument."
-  (let* ((files (or list
-                    (zk--directory-files t)))
+(defun zk-select-file (&optional prompt files &rest args)
+  "Call `zk-select-file-function', passing PROMPT, FILES, and ARGS to it."
+  (apply zk-select-file-function prompt files `,@args))
+
 (defun zk--select-file (&optional prompt files group sort initial-input)
   "Select a zk-file with `completing-read' showing PROMPT.
 Offers candidates from list of FILES, if supplied, or from
@@ -838,9 +837,12 @@ title."
   "Find file in `zk-directory'.
 If OTHER-WINDOW is non-nil (or command is executed with
 \\[universal-argument]), find file in other window."
-  (interactive "P")
-  (funcall (if other-window 'find-file-other-window 'find-file)
-           (funcall zk-select-file-function "Find file: ")))
+  (interactive "p")
+  (if other-window
+      (find-file-other-window
+       (zk-select-file "Find file in other window: "))
+    (find-file
+       (zk-select-file "Find file: "))))
 
 ;;;###autoload
 (defun zk-find-file-by-id (id)
@@ -855,8 +857,8 @@ If OTHER-WINDOW is non-nil (or command is executed with
                       nil 'zk-search-history)))
   (let ((files (zk--grep-file-list regexp)))
     (if files
-        (find-file (funcall zk-select-file-function
-                            (format "Files containing \"%s\": " regexp) files))
+        (find-file (zk-select-file
+                    (format "Files containing \"%s\": " regexp) files))
       (user-error "No results for \"%s\"" regexp))))
 
 ;;;###autoload
@@ -868,9 +870,7 @@ Optionally call a custom function by setting the variable
   (if zk-current-notes-function
       (funcall zk-current-notes-function)
     (find-file
-     (funcall zk-select-file-function
-              "Current Notes:"
-              (zk--current-notes-list)))))
+     (zk-select-file "Current Notes:" (zk--current-notes-list)))))
 
 ;;; Follow Links
 
@@ -907,7 +907,7 @@ Optionally call a custom function by setting the variable
   (interactive)
   (let* ((files (ignore-errors (zk--links-in-note-list))))
     (if files
-        (find-file (funcall zk-select-file-function "Links: " files))
+        (find-file (zk-select-file "Links: " files))
       (user-error "No links found"))))
 
 ;;; Insert Link
@@ -919,7 +919,7 @@ By default, only a link is inserted. With prefix-argument, both
 link and title are inserted. See variable `zk-link-and-title'
 for additional configurations. Optional TITLE."
   (interactive
-   (list (list (funcall zk-select-file-function "Insert link: "))))
+   (list (list (zk-select-file "Insert link: "))))
   (if (zk--id-at-point)
       (user-error "Move point off zk-id before inserting")
     (let* ((pref current-prefix-arg))
@@ -991,11 +991,10 @@ brackets \"[[\" initiates completion."
 ;;;###autoload
 (defun zk-copy-link-and-title (arg)
   "Copy link and title for id or file ARG."
-  (interactive (list (funcall zk-select-file-function "Copy link: ")))
+  (interactive (list (zk-select-file "Copy link: ")))
   (let ((links (zk--formatted-string arg zk-link-and-title-format)))
     (kill-new links)
     (message "Copied: %s" links)))
-
 
 ;;; List Backlinks
 
@@ -1010,7 +1009,7 @@ brackets \"[[\" initiates completion."
   (let* ((id (zk--file-id buffer-file-name))
          (files (zk--backlinks-list id)))
     (if files
-        (find-file (funcall zk-select-file-function "Backlinks: " files))
+        (find-file (zk-select-file "Backlinks: " files))
       (user-error "No backlinks found"))))
 
 ;;; Search
@@ -1101,9 +1100,8 @@ Select TAG, with completion, from list of all tags in zk notes."
   (let* ((ids (zk--unlinked-notes-list))
          (notes (mapcar (lambda (id) (zk--parse-id 'file-path id)) ids)))
     (if notes
-        (find-file (funcall zk-select-file-function "Unlinked notes: " notes))
+        (find-file (zk-select-file "Unlinked notes: " notes))
       (user-error "No unlinked notes found"))))
-
 
 ;;; zk-network - Backlinks and Forward Links Together
 
@@ -1124,11 +1122,10 @@ Backlinks and Links-in-Note are grouped separately."
             (push (propertize (abbreviate-file-name file) 'type 'link) resources))
           (dolist (file backlinks)
             (push (propertize file 'type 'backlink) resources))
-          (find-file (funcall zk-select-file-function
-                              "Links: "
-                              resources
-                              'zk--network-group-function
-                              'identity)))
+          (find-file (zk-select-file "Links: "
+                                     resources
+                                     'zk--network-group-function
+                                     'identity)))
       (user-error "No links found"))))
 
 (defun zk--network-group-function (file transform)
