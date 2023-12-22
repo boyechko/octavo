@@ -418,11 +418,30 @@ match; ignore case. If ZK-ALIST is non-nil, use it."
       (user-error "Not a zk file")))
 (make-obsolete 'zk--current-id 'zk--file-id "0.5")
 
-(defun zk--directory-files (&optional full regexp)
+(defvar zk--directory-files-cache nil
+  "Store the result of `zk--directory-files' to prevent re-scanning.
+This is an alist with key [DIRECTORY FULL REGEXP] and list
+of FILES as value.")
+
+(defun zk--directory-files-cache-key-equal (key1 key2)
+  "Return non-nil if KEY1 and KEY2 are the same."
+  (and (string= (elt key1 0) (elt key2 0))
+       (eq (elt key1 1) (elt key2 1))
+       (string= (elt key1 2) (elt key2 2))))
+
+(defmacro zk--directory-files-cached (&optional directory full regexp)
+  "Return the cached file list for DIRECTORY, FULL, and REGEXP.
+DIRECTORY defaults to `zk-directory'."
+  `(alist-get (vector (or ,directory zk-directory) ,full ,regexp)
+              zk--directory-files-cache
+              nil nil #'zk--directory-files-cache-key-equal))
+
+(defun zk--directory-files (&optional full regexp refresh)
   "Return list of zk-files in `zk-directory'.
-Excludes lockfiles, autosave files, and backup files. When FULL is
-non-nil, return full file-paths. If REGEXP is non-nil, it must be
-a regexp to replace the default, `zk-id-regexp'.
+Excludes lockfiles, autosave files, and backup files. When
+FULL is non-nil, return full file-paths. If REGEXP is non-nil,
+it must be a regexp to replace the default, `zk-id-regexp'.
+With REFRESH, rescan the file system and update the cache.
 
 When `zk-directory-recursive' is non-nil, searches recursively in
 subdirectories of `zk-directory' (except those matching
@@ -430,15 +449,18 @@ subdirectories of `zk-directory' (except those matching
 file-paths."
   (let* ((regexp (or regexp zk-id-regexp)))
     (garbage-collect)                   ; prevents eventual slowdown
-    (seq-filter #'zk-file-p
-                (if (not zk-directory-recursive)
-                    (directory-files zk-directory full regexp)
-                  (directory-files-recursively
-                   zk-directory regexp nil
-                   (lambda (dir)
-                     (not (string-match
-                           zk-directory-recursive-ignore-dir-regexp
-                           dir))))))))
+    (or (and (not refresh)
+             (zk--directory-files-cached zk-directory full regexp))
+        (setf (zk--directory-files-cached zk-directory full regexp)
+              (seq-filter #'zk-file-p
+                          (if (not zk-directory-recursive)
+                              (directory-files zk-directory full regexp)
+                            (directory-files-recursively
+                             zk-directory regexp nil
+                             (lambda (dir)
+                               (not (string-match
+                                     zk-directory-recursive-ignore-dir-regexp
+                                     dir))))))))))
 
 (defun zk--current-notes-list ()
   "Return list of files for currently open notes."
