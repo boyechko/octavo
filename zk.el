@@ -61,6 +61,7 @@
 
 (require 'thingatpt)
 (require 'format-spec)
+(require 'seq)
 
 ;;; Variable Declarations
 
@@ -427,27 +428,17 @@ When `zk-directory-recursive' is non-nil, searches recursively in
 subdirectories of `zk-directory' (except those matching
 `zk-directory-recursive-ignore-dir-regexp') and returns full
 file-paths."
-  (garbage-collect) ;; prevents eventual slowdown
-  (let* ((regexp (or regexp zk-id-regexp))
-         (list
-          (if (not zk-directory-recursive)
-              (directory-files zk-directory full regexp)
-            (directory-files-recursively
-             zk-directory regexp nil
-             (lambda (dir)
-               (not (string-match
-                     zk-directory-recursive-ignore-dir-regexp
-                     dir))))))
-         (files
-          (remq nil (mapcar
-                     (lambda (x)
-                       (when (and (string-match (zk-file-name-regexp) x)
-                                  (not (string-match-p
-                                        "^[.]\\|[#|~]$"
-                                        (file-name-nondirectory x))))
-                         x))
-                     list))))
-    files))
+  (let* ((regexp (or regexp zk-id-regexp)))
+    (garbage-collect)                   ; prevents eventual slowdown
+    (seq-filter #'zk-file-p
+                (if (not zk-directory-recursive)
+                    (directory-files zk-directory full regexp)
+                  (directory-files-recursively
+                   zk-directory regexp nil
+                   (lambda (dir)
+                     (not (string-match
+                           zk-directory-recursive-ignore-dir-regexp
+                           dir))))))))
 
 (defun zk--current-notes-list ()
   "Return list of files for currently open notes."
