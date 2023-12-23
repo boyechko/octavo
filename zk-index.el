@@ -173,16 +173,13 @@ a new index."
 
 ;;; Formatting
 
-(defun zk-index--format-candidates (&optional files format)
+(defun zk-index--format-candidates (files &optional format)
   "Return a list of FILES as formatted candidates, following FORMAT.
 See `zk--format' for details about FORMAT. If nil, `zk-index-format'
-will be used by default. FILES must be a list of filepaths. If nil,
-all files in `zk-directory' will be returned as formatted candidates."
+will be used by default. FILES must be a list of filepaths."
   (let* ((format (or format zk-index-format))
-         (list (or files
-                   (zk--directory-files)))
-         (output))
-    (dolist (file list)
+         output)
+    (dolist (file files)
       (when (and file (string-match (zk-file-name-regexp) file))
         (let ((id (if zk-index-invisible-ids
                       (propertize (match-string 1 file) 'invisible t)
