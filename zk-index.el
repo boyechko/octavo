@@ -202,12 +202,9 @@ all files in `zk-directory' will be returned as formatted candidates."
   (interactive)
   (setq zk-index-last-format-function format-fn)
   (setq zk-index-last-sort-function sort-fn)
-  (let ((inhibit-message nil)
-        (inhibit-read-only t)
-        (buf-name (or buf-name
-                      zk-index-buffer-name))
-        (list (or files
-                  (zk--directory-files t))))
+  (let ((inhibit-read-only t)
+        (buf-name (or buf-name zk-index-buffer-name))
+        (files (or files (zk--directory-files 'full nil 'refresh))))
     (if (not (get-buffer buf-name))
         (progn
           (when zk-default-backlink
@@ -217,7 +214,7 @@ all files in `zk-directory' will be returned as formatted candidates."
           (with-current-buffer buf-name
             (setq default-directory (expand-file-name zk-directory))
             (zk-index-mode)
-            (zk-index--populate-index list format-fn sort-fn)
+            (zk-index--populate-index files format-fn sort-fn)
             (setq truncate-lines t)
             (goto-char (point-min)))
           (pop-to-buffer buf-name
@@ -231,17 +228,12 @@ all files in `zk-directory' will be returned as formatted candidates."
   "Refresh the index.
 Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   (interactive)
-  (let ((inhibit-message t)
-        (inhibit-read-only t)
-        (files (or files
-                   (zk--directory-files t)))
-        (sort-fn (or sort-fn
-                     (setq zk-index-last-sort-function nil)))
-        (buf-name (or buf-name
-                      zk-index-buffer-name))
-        (line))
-    (setq zk-index-last-format-function format-fn)
-    (setq zk-index-last-sort-function sort-fn)
+  (let ((inhibit-read-only t)
+        (files (or files (zk--directory-files 'full nil 'refresh)))
+        (buf-name (or buf-name zk-index-buffer-name))
+        line)
+    (setq zk-index-last-format-function format-fn
+          zk-index-last-sort-function sort-fn)
     (with-current-buffer buf-name
       (setq line (line-number-at-pos))
       (erase-buffer)
