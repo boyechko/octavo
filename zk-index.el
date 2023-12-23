@@ -217,7 +217,7 @@ all files in `zk-directory' will be returned as formatted candidates."
           (with-current-buffer buf-name
             (setq default-directory (expand-file-name zk-directory))
             (zk-index-mode)
-            (zk-index--sort list format-fn sort-fn)
+            (zk-index--populate-index list format-fn sort-fn)
             (setq truncate-lines t)
             (goto-char (point-min)))
           (pop-to-buffer buf-name
@@ -246,7 +246,7 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
       (setq line (line-number-at-pos))
       (erase-buffer)
       (zk-index--reset-mode-name)
-      (zk-index--sort files format-fn sort-fn)
+      (zk-index--populate-index files format-fn sort-fn)
       (goto-char (point-min))
       (setq truncate-lines t)
       (unless (zk-index-narrowed-p buf-name)
@@ -254,21 +254,14 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
           (zk-index--reset-mode-line)
           (goto-line line))))))
 
-(defun zk-index--sort (files &optional format-fn sort-fn)
-  "Sort FILES, with option FORMAT-FN and SORT-FN."
-  (let* ((sort-fn (or sort-fn
-                      'zk-index--sort-modified))
-         (files (if (zk--singleton-p files)
-                    files
-                  (nreverse (funcall sort-fn files)))))
-    (funcall #'zk-index--format files format-fn)))
-
-(defun zk-index--format (files &optional format-fn)
-  "Format FILES with optional custom FORMAT-FN."
-  (let* ((format-fn (or format-fn
-                        zk-index-format-function))
-         (candidates (funcall format-fn files)))
-    (zk-index--insert candidates)))
+(defun zk-index--populate-index (files &optional format-fn sort-fn)
+  "Populate Zk-Index with sorted and formatted files.
+FILES are sorted with SORT-FN (or `zk-index--sort-modified')
+and formatted with FORMAT-FN (or `zk-index-format-function')."
+  (let* ((sort-fn (or sort-fn 'zk-index--sort-modified))
+         (format-fn (or format-fn zk-index-format-function))
+         (files (nreverse (funcall sort-fn files))))
+    (zk-index--insert (funcall format-fn files))))
 
 (eval-and-compile
   (define-button-type 'zk-index
