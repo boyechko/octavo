@@ -404,7 +404,7 @@ match; ignore case. If ZK-ALIST is non-nil, use it."
                 (push (car item) ids))
             (push (car item) ids)))
         ids)
-    (zk--parse-file 'id (zk--directory-files t))))
+    (zk--parse-file 'id (zk--directory-files 'full))))
 
 (defun zk-id-p (id)
   "Return t if ID is already in use as a zk-id."
@@ -584,15 +584,13 @@ passed to `completion-read'."
 
 (defun zk--alist ()
   "Return an alist ID, title, and file-path triples."
-  (mapcar
-   (lambda (file)
-     (when (string= (file-name-extension file) zk-file-extension)
-       (string-match (zk-file-name-regexp) file)
-       `(,(match-string-no-properties 1 file)
-         ,(replace-regexp-in-string zk-file-name-separator " "
-                                    (match-string-no-properties 2 file))
-         ,file)))
-   (zk--directory-files t)))
+  (mapcar (lambda (file)
+            (when (string-match (zk-file-name-regexp) file)
+              `(,(match-string 1 file)
+                ,(replace-regexp-in-string zk-file-name-separator " "
+                                           (match-string 2 file))
+                ,file)))
+          (zk--directory-files 'full)))
 
 (defun zk--parse-id (target id &optional zk-alist)
   "Return TARGET, either `file-path or `title, from file with ID.
