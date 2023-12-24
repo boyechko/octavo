@@ -93,7 +93,7 @@ This lets the user complete a link through the `org-insert-link'
 interface by first selecting the `zk:' hyperlink type."
   (concat
    "zk:"
-   (zk--parse-file 'id (zk--select-file))))
+   (car (zk--parse-file (zk--select-file)))))
 
 (defun zk-org-link--help-echo (_win _obj pos)
   "Generate help-echo tooltip for `zk:' Org links.

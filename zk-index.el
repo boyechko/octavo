@@ -513,17 +513,16 @@ between those positions, inclusive."
     (when files
       files)))
 
-(defun zk-index--sort-created (list)
-  "Sort LIST for latest created."
+(defun zk-index--sort-created (files)
+  "Sort FILES in ascending alphabetical order by ID."
   (let ((ht (make-hash-table :test #'equal :size 5000)))
-    (dolist (x list)
-      (puthash x (zk--parse-file 'id x) ht))
-    (sort list
+    (mapc (lambda (x)
+            (puthash x (car (zk--parse-file x)) ht))
+          files)
+    (sort files
           (lambda (a b)
-            (let ((one
-                   (gethash a ht))
-                  (two
-                   (gethash b ht)))
+            (let ((one (gethash a ht))
+                  (two (gethash b ht)))
               (string< two one))))))
 
 (defun zk-index--sort-modified (list)

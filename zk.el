@@ -338,10 +338,22 @@ Group 2 is the title."
               (concat "\\(?1:" (or id zk-id-regexp) "\\)")
               (concat "\\(?2:" (or title zk-title-regexp) "\\)")))
 
+(defun zk--parse-file (file)
+  "If FILE is a Zk-file, return (ID . TITLE); otherwise, nil."
+  (when-let* ((_ (stringp file))
+              (filename (file-name-nondirectory file))
+              (_ (string-match (zk-file-name-regexp) filename)))
+    (cons (match-string 1 filename)
+          (replace-regexp-in-string zk-file-name-separator " "
+                                    (match-string 2 filename)))))
+
 (defun zk--file-id (file)
   "Return the ID of the given zk FILE."
-  (when (string-match (zk-file-name-regexp) file)
-    (match-string-no-properties 1 file)))
+  (car (zk--parse-file file)))
+
+(defun zk--file-title (file)
+  "Return the title of the given zk FILE."
+  (cdr (zk--parse-file file)))
 
 (defun zk--id-file (id)
   "Return the full file path for the existing zk note with ID.
@@ -404,7 +416,7 @@ match; ignore case. If ZK-ALIST is non-nil, use it."
                 (push (car item) ids))
             (push (car item) ids)))
         ids)
-    (zk--parse-file 'id (zk--directory-files 'full))))
+    (mapcar 'zk--file-id (zk--directory-files 'full))))
 
 (defun zk-id-p (id)
   "Return t if ID is already in use as a zk-id."
@@ -525,7 +537,7 @@ If INVERT is non-nil, return list of files *not* matching."
 (defun zk--grep-id-list (regexp &optional invert)
   "Return a list of IDs for files containing REGEXP.
 If INVERT is non-nil, return list of files *not* matching."
-  (let ((ids (zk--parse-file 'id (zk--grep-file-list regexp invert))))
+  (let ((ids (mapcar #'zk--file-id (zk--grep-file-list regexp invert))))
     (if (stringp ids)
         (list ids)
       ids)))
@@ -606,30 +618,6 @@ the file system directly via `zk--id-file'."
              (error "Cannot figure out title for file with ID %s: %s"
                     id (file-name-nondirectory file))))
           (t (error "Invalid target: %s" target)))))
-
-(defun zk--parse-file (target files)
-  "Return TARGET, either `id or `title, from FILES.
-Takes a single file-path, as a string, or a list of file-paths.
-A note's title is understood to be the portion of its filename
-following the zk ID, in the format `zk-id-regexp', and preceding the
-file extension."
-  (let ((result
-         (mapcar (lambda (file)
-                   (when (string-match (zk-file-name-regexp) file)
-                     (pcase target
-                       ('id    (match-string 1 file))
-                       ('title (replace-regexp-in-string
-                                (regexp-quote zk-file-name-separator)
-                                " "
-                                (match-string 2 file)))
-                       (_ (signal 'wrong-type-argument
-                                  `((or 'id 'title) ,target))))))
-                 (if (listp files)
-                     files
-                   (list files)))))
-    (if (zk--singleton-p result)
-        (car result)
-      result)))
 
 ;;; Formatting
 
