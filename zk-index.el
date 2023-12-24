@@ -168,7 +168,7 @@ selected by `embark-select', narrows index to selected
 candidates. Alternatively, `embark-export' exports candidates to
 a new index."
   (let ((files (zk--processor arg)))
-    (zk-index files)
+    (zk-index-refresh files)
     (zk-index--reset-mode-line)))
 
 ;;; Formatting
@@ -194,52 +194,44 @@ will be used by default. FILES must be a list of filepaths."
 ;;; Main Stack
 
 ;;;###autoload
-(defun zk-index (&optional files format-fn sort-fn buf-name)
-  "Open ZK-Index, with optional FILES, FORMAT-FN, SORT-FN, BUF-NAME."
+(defun zk-index (&optional buf-name)
+  "Open ZK-Index.
+If BUF-NAME is specified, either switch or initialize a
+buffer with that name."
   (interactive)
-  (setq zk-index-last-format-function format-fn)
-  (setq zk-index-last-sort-function sort-fn)
-  (let ((inhibit-read-only t)
-        (buf-name (or buf-name zk-index-buffer-name))
-        (files (or files (zk--directory-files 'full nil 'refresh))))
-    (if (not (get-buffer buf-name))
-        (progn
-          (when zk-default-backlink
-            (unless (zk-file-p)
-              (zk-find-file-by-id zk-default-backlink)))
-          (generate-new-buffer buf-name)
-          (with-current-buffer buf-name
-            (setq default-directory (expand-file-name zk-directory))
-            (zk-index-mode)
-            (zk-index--populate-index files format-fn sort-fn)
-            (setq truncate-lines t)
-            (goto-char (point-min)))
-          (pop-to-buffer buf-name
-                         '(display-buffer-at-bottom)))
-      (when files
-        (zk-index-refresh files format-fn sort-fn buf-name))
-      (pop-to-buffer buf-name
-                     '(display-buffer-at-bottom)))))
+  (let* ((buf-name (or buf-name zk-index-buffer-name))
+         ;; TODO Make ALL-FRAMES argument to `get-buffer-window' customizable?
+         (win (get-buffer-window buf-name nil))) ; == check only current frame
+    (unless (get-buffer zk-index-buffer-name)
+      (zk-index-refresh nil nil nil buf-name))
+    (if win
+        (select-window win)
+      (pop-to-buffer buf-name))))
 
 (defun zk-index-refresh (&optional files format-fn sort-fn buf-name)
-  "Refresh the index.
+  "Refresh the Zk-Index.
 Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   (interactive)
   (let ((inhibit-read-only t)
         (files (or files (zk--directory-files 'full nil 'refresh)))
-        (buf-name (or buf-name zk-index-buffer-name))
-        line)
+        (buf-name (or buf-name zk-index-buffer-name)))
     (setq zk-index-last-format-function format-fn
-          zk-index-last-sort-function sort-fn)
+          zk-index-last-sort-function sort-fn
+          default-directory (expand-file-name zk-directory))
+    (unless (get-buffer buf-name)
+      (when zk-default-backlink
+        (unless (zk-file-p)
+          (zk-find-file-by-id zk-default-backlink)))
+      (generate-new-buffer buf-name))
     (with-current-buffer buf-name
-      (setq line (line-number-at-pos))
-      (erase-buffer)
-      (zk-index--reset-mode-name)
-      (zk-index--populate-index files format-fn sort-fn)
-      (goto-char (point-min))
-      (setq truncate-lines t)
-      (unless (zk-index-narrowed-p buf-name)
-        (progn
+      (let ((line (line-number-at-pos)))
+        (setq-local truncate-lines t)
+        (erase-buffer)
+        (zk-index-mode)
+        (zk-index--reset-mode-name)
+        (zk-index--populate-index files format-fn sort-fn)
+        (goto-char (point-min))
+        (unless (zk-index-narrowed-p buf-name)
           (zk-index--reset-mode-line)
           (goto-line line))))))
 
