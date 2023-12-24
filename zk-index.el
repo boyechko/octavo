@@ -180,15 +180,16 @@ will be used by default. FILES must be a list of filepaths."
   (let* ((format (or format zk-index-format))
          output)
     (dolist (file files)
-      (when (and file (string-match (zk-file-name-regexp) file))
-        (let ((id (if zk-index-invisible-ids
-                      (propertize (match-string 1 file) 'invisible t)
-                    (match-string 1 file)))
-              (title (replace-regexp-in-string
-                      zk-file-name-separator
-                      " "
-                      (match-string 2 file))))
-          (push (zk--format format id title) output))))
+      (when-let* ((file (file-name-nondirectory (or file "")))
+                  (_ (string-match (zk-file-name-regexp) file))
+                  (id (if zk-index-invisible-ids
+                          (propertize (match-string 1 file) 'invisible t)
+                        (match-string 1 file)))
+                  (title (replace-regexp-in-string
+                          zk-file-name-separator
+                          " "
+                          (match-string 2 file))))
+        (push (zk--format format id title) output)))
     output))
 
 ;;; Main Stack
