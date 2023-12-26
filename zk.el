@@ -377,6 +377,9 @@ matches, return nil."
                   (length matches)
                   id)))))
 
+(defalias 'zk-id-p 'zk--id-file)
+(make-obsolete 'zk-id-p 'zk--id-file "0.6")
+
 (defun zk-file-p (&optional file strict)
   "Return t if FILE is a zk-file.
 If FILE is not given, get it from variable `buffer-file-name'.
@@ -397,9 +400,8 @@ otherwise just match against `zk-file-name-regexp'."
   "Generate and return a zk ID.
 The ID is created using `zk-id-time-string-format'."
   (let ((id (format-time-string zk-id-time-string-format)))
-    (while (zk-id-p id)
-      (setq id (1+ (string-to-number id)))
-      (setq id (number-to-string id)))
+    (while (zk--id-file id)
+      (setq id (number-to-string (1+ (string-to-number id)))))
     id))
 
 (defun zk--id-list (&optional regexp zk-alist)
@@ -418,12 +420,6 @@ match; ignore case. If ZK-ALIST is non-nil, use it."
             (push (car item) ids)))
         ids)
     (mapcar 'zk--file-id (zk--directory-files 'full))))
-
-(defun zk-id-p (id)
-  "Return t if ID is already in use as a zk-id."
-  (when (and (listp (zk--id-list))
-             (member id (zk--id-list)))
-    t))
 
 (defun zk--current-id ()
   "Return the ID of zk note in current buffer."
