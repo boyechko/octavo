@@ -64,11 +64,6 @@ See `zk-index--format-candidates' for details."
   "String to prepend to note names in ZK-Index."
   :type 'string)
 
-(defcustom zk-index-help-echo-function 'zk-index-help-echo
-  "Default help-echo function for ZK-Index buttons.
-Set to nil to inhibit help-echo."
-  :type 'function)
-
 (defcustom zk-index-auto-scroll t
   "Enable automatically showing note at point in ZK-Index."
   :type 'boolean)
@@ -84,6 +79,17 @@ function must take two arguments, FILE and BUFFER respectively.
 See the default function `zk-index-button-display-action' for an
 example."
   :type 'function)
+
+(defcustom zk-index-help-echo zk-index-format
+  "Whether or how to display help-echo for the Zk-Index buttons.
+It can be NIL (inhibit help echo), a function taking one
+argument, the FILE associated with the button, or a format
+string appropriate for `zk--format'."
+  :type '(choice (string :tag "Format string")
+                 (function :tag "Format function")
+                 (const :tag "None" nil)))
+(make-obsolete 'zk-index-help-echo-function
+               'zk-index-help-echo "0.9")
 
 ;;; ZK-Index Major Mode Settings
 
@@ -257,7 +263,8 @@ and formatted with FORMAT-FN (or `zk-index-format-function')."
         (insert-text-button .label
                             'type 'zk-index
                             'button-data .file
-                            'help-echo zk-index-help-echo-function)
+                            'help-echo (when zk-index-help-echo
+                                         (zk-index--help-echo .file .label)))
         (setq count (1+ count))))
     (zk-index--set-mode-name (format " [%d]" count))))
 
@@ -280,15 +287,18 @@ and formatted with FORMAT-FN (or `zk-index-format-function')."
          (buffer (find-file-noselect file)))
     (funcall zk-index-button-display-function file buffer)))
 
-(defun zk-index-help-echo (win _obj pos)
-  "Generate help-echo for `zk-index' button in WIN at POS."
-  (with-selected-window win
-    (goto-char pos)
-    (let* ((beg (+ (line-beginning-position)
-                   (length zk-index-prefix)))
-           (end (line-end-position))
-           (title (buffer-substring beg end)))
-      (format "%s" title))))
+(defun zk-index--help-echo (file label)
+  "Generate help-echo when FILE's button (with LABEL) is at point.
+The return depends on the value of `zk-index-help-echo'."
+  (cond ((functionp zk-index-help-echo)
+         (funcall zk-index-help-echo file))
+        ((equal zk-index-help-echo zk-index-format)
+         label)
+        ((stringp zk-index-help-echo)
+         (let ((id-title (zk--parse-file file)))
+           (zk--format zk-index-help-echo (car id-title) (cdr id-title))))
+        (t
+         nil)))
 
 (defun zk-index-narrowed-p (buf-name)
   "Return t when index is narrowed in buffer BUF-NAME."
