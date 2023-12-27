@@ -48,7 +48,8 @@
   :type 'string)
 
 (defcustom zk-index-format-function 'zk-index--format-candidates
-  "Default formatting function for ZK-Index candidates."
+  "Default formatting function for ZK-Index candidates.
+See `zk-index--format-candidates' for details."
   :type 'function)
 
 (defcustom zk-index-invisible-ids t
@@ -174,19 +175,22 @@ a new index."
 ;;; Formatting
 
 (defun zk-index--format-candidates (files &optional format)
-  "Return a list of FILES as formatted candidates, following FORMAT.
-See `zk--format' for details about FORMAT. If nil, `zk-index-format'
-will be used by default. FILES must be a list of filepaths."
+  "Return a list of Zk-Index candidates based on FILES and FORMAT.
+Each candidate is an alist with keys 'FILE and 'LABEL, the
+latter being the return value of `zk--format' called with
+FORMAT (defaults to `zk-index-format'). FILES must be a list
+of filepaths. This is the default `zk-index-format-function'."
   (let* ((format (or format zk-index-format))
          output)
-    (dolist (file files)
+    (dolist (file files output)
       (when-let* ((id-title (zk--parse-file (or file "")))
                   (id (if zk-index-invisible-ids
                           (propertize (car id-title) 'invisible t)
                         (car id-title)))
                   (title (cdr id-title)))
-        (push (zk--format format id title) output)))
-    output))
+        (push `((file . ,file)
+                (label . ,(zk--format format id title)))
+              output)))))
 
 ;;; Main Stack
 
@@ -232,41 +236,30 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
           (zk-index--reset-mode-line)
           (goto-line line))))))
 
+(eval-and-compile
+  (define-button-type 'zk-index
+    'follow-link t
+    'button-data nil
+    'action 'zk-index-button-action
+    'face 'default))
+
 (defun zk-index--populate-index (files &optional format-fn sort-fn)
-  "Populate Zk-Index with sorted and formatted files.
+  "Populate the current buffer with Zk-Index candidates.
 FILES are sorted with SORT-FN (or `zk-index--sort-modified')
 and formatted with FORMAT-FN (or `zk-index-format-function')."
   (let* ((sort-fn (or sort-fn 'zk-index--sort-modified))
          (format-fn (or format-fn zk-index-format-function))
-         (files (nreverse (funcall sort-fn files))))
-    (zk-index--insert (funcall format-fn files))))
-
-(eval-and-compile
-  (define-button-type 'zk-index
-    'follow-link t
-    'action 'zk-index-button-action
-    'face 'default))
-
-(defun zk-index--insert (candidates)
-  "Insert CANDIDATES into ZK-Index."
-  (when (eq major-mode 'zk-index-mode)
-    (save-excursion
-      (dolist (file candidates)
-        (insert zk-index-prefix file "\n"))
-      (zk-index--make-buttons)
-      (zk-index--set-mode-name (format " [%s]" (length candidates))))))
-
-(defun zk-index--make-buttons ()
-  "Make buttons in ZK-Index buffer."
-  (goto-char (point-min))
-  (while (re-search-forward zk-id-regexp nil t)
-    (let* ((beg (line-beginning-position))
-           (end (line-end-position)))
-      (beginning-of-line)
-      (make-text-button beg end
-                        'type 'zk-index
-                        'help-echo zk-index-help-echo-function)
-      (end-of-line))))
+         (candidates (nreverse (funcall format-fn (funcall sort-fn files))))
+         (count 0))
+    (dolist (alist candidates)
+      (let-alist alist
+        (unless (zerop count) (insert "\n"))
+        (insert-text-button .label
+                            'type 'zk-index
+                            'button-data .file
+                            'help-echo zk-index-help-echo-function)
+        (setq count (1+ count))))
+    (zk-index--set-mode-name (format " [%d]" count))))
 
 ;;; Utilities
 
