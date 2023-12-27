@@ -72,13 +72,13 @@ See `zk-index--format-candidates' for details."
   "Hide cursor in `zk-index-view-mode'."
   :type 'boolean)
 
-(defcustom zk-index-button-display-function 'zk-index-button-display-action
-  "Function called when buttons pressed in ZK-Index.
-The function is called by `zk-index-button-action'. A custom
-function must take two arguments, FILE and BUFFER respectively.
-See the default function `zk-index-button-display-action' for an
-example."
+(defcustom zk-index-display-buffer-function 'zk-index-display-buffer
+  "Function that shows the buffer of selected Zk-Index candidate.
+It should take one argument, the BUFFER associated with a
+zk-file. See `zk-index-display-buffer' for an example."
   :type 'function)
+(make-obsolete 'zk-index-button-display-function
+               'zk-index-display-buffer-function "0.9")
 
 (defcustom zk-index-help-echo zk-index-format
   "Whether or how to display help-echo for the Zk-Index buttons.
@@ -246,7 +246,7 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   (define-button-type 'zk-index
     'follow-link t
     'button-data nil
-    'action 'zk-index-button-action
+    'action 'zk-index--button-action
     'face 'default))
 
 (defun zk-index--populate-index (files &optional format-fn sort-fn)
@@ -268,25 +268,6 @@ and formatted with FORMAT-FN (or `zk-index-format-function')."
         (setq count (1+ count))))
     (zk-index--set-mode-name (format " [%d]" count))))
 
-;;; Utilities
-
-(defun zk-index-button-display-action (file buffer)
-  "Function to display FILE or BUFFER on button press in ZK-Index."
-  (if (one-window-p)
-      (pop-to-buffer buffer
-                     (display-buffer-in-direction
-                      buffer
-                      '((direction . top)
-                        (window-height . 0.6))))
-    (find-file-other-window file)))
-
-(defun zk-index-button-action (_)
-  "Action taken when `zk-index' button is pressed."
-  (let* ((id (zk-index--button-at-point-p))
-         (file (zk--parse-id 'file-path id))
-         (buffer (find-file-noselect file)))
-    (funcall zk-index-button-display-function file buffer)))
-
 (defun zk-index--help-echo (file label)
   "Generate help-echo when FILE's button (with LABEL) is at point.
 The return depends on the value of `zk-index-help-echo'."
@@ -299,6 +280,28 @@ The return depends on the value of `zk-index-help-echo'."
            (zk--format zk-index-help-echo (car id-title) (cdr id-title))))
         (t
          nil)))
+
+(defun zk-index-display-buffer (buffer)
+  "Display BUFFER corresponding to the pressed Zk-Index button.
+This is the default value of `zk-index-display-buffer-function'."
+  (pop-to-buffer
+   buffer
+   (if (one-window-p)
+       (display-buffer-in-direction
+        buffer '((direction . top) (window-height . 0.6)))
+     (display-buffer-use-some-window
+      buffer '((inhibit-same-window . t))))))
+
+(defun zk-index--button-action (file)
+  "Action taken when `zk-index' button is pressed.
+FILE is the content of button's 'BUTTON-DATA property, which
+for `zk-index' button should be the filepath of the note
+represented by the button."
+  ;; This function merely passes the buck to `zk-index-display-buffer-function',
+  ;; which should do the actual displaying. Maintaining this extra layer of
+  ;; indirection allows adding other behavior in the future (e.g. keeping a
+  ;; tally of all buttons pressed in a session).
+  (funcall zk-index-display-buffer-function (find-file-noselect file)))
 
 (defun zk-index-narrowed-p (buf-name)
   "Return t when index is narrowed in buffer BUF-NAME."
@@ -551,7 +554,7 @@ between those positions, inclusive."
          (kill (unless (get-file-buffer file)
                  t))
          (buffer (find-file-noselect file)))
-    (funcall zk-index-button-display-function file buffer)
+    (funcall zk-index-display-buffer-function buffer)
     (setq-local zk-index-view--kill kill)
     (zk-index-view-mode)))
 
