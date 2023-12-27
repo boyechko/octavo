@@ -310,30 +310,30 @@ and formatted with FORMAT-FN (or `zk-index-format-function')."
 ;;;; Index Search
 ;; narrow index based on search of notes' full text
 
-(defun zk-index-search ()
-  "Narrow index based on regexp search of note contents."
-  (interactive)
+(defun zk-index-search (regexp)
+  "Narrow index based on REGEXP search of note contents."
+  (interactive
+   (list (read-string "Search: " nil 'zk-search-history)))
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh
-       (zk-index-query-files)
-       zk-index-last-format-function
-       zk-index-last-sort-function
-       (buffer-name))
+      (zk-index-refresh (zk-index-query-files regexp 'search)
+                        zk-index-last-format-function
+                        zk-index-last-sort-function
+                        (buffer-name))
     (user-error "Not in a ZK-Index")))
 
 ;;;; Index Focus
 ;; narrow index based on search of note titles (case sensitive)
-;; an alternative to consult-focus-lines
+;; an alternative to `consult-focus-lines'
 
-(defun zk-index-focus ()
-  "Narrow index based on regexp search of note titles."
-  (interactive)
+(defun zk-index-focus (regexp)
+  "Narrow index based on REGEXP search of note titles."
+  (interactive
+   (list (read-string "Focus: " nil 'zk-search-history)))
   (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh
-       (zk-index-query-files)
-       zk-index-last-format-function
-       zk-index-last-sort-function
-       (buffer-name))
+      (zk-index-refresh (zk-index-query-files regexp 'focus)
+                        zk-index-last-format-function
+                        zk-index-last-sort-function
+                        (buffer-name))
     (user-error "Not in a ZK-Index")))
 
 ;;;; Low-level Query Functions
@@ -344,29 +344,25 @@ Takes form of (COMMAND . TERM), where COMMAND is `ZK-INDEX-FOCUS
 or `ZK-INDEX-SEARCH, and TERM is the query string. Recent
 items listed first.")
 
-(defun zk-index-query-files ()
-  "Return narrowed list of notes, based on focus or search query."
-  (let* ((command this-command)
-         (scope (if (zk-index-narrowed-p (buffer-name))
+(defun zk-index-query-files (regexp query-type)
+  "Return narrowed list of notes matching REGEXP.
+QUERY-TYPE can be either 'focus (filename only) or 'search (full
+text)."
+  (let* ((scope (if (zk-index-narrowed-p (buffer-name))
                     (zk-index--current-id-list (buffer-name))
                   (setq zk-index-query-terms nil)
                   (zk--id-list)))
-         (regexp (read-string (cond ((eq command 'zk-index-focus)
-                                     "Focus: ")
-                                    ((eq command 'zk-index-search)
-                                     "Search: "))
-                              nil 'zk-search-history))
-         (query (cond
-                 ((eq command 'zk-index-focus)
-                  (zk--id-list regexp))
-                 ((eq command 'zk-index-search)
-                  (zk--grep-id-list regexp))))
-         (ids (mapcar (lambda (x) (when (member x scope) x))
-                      query))
+         (results (pcase query-type
+                    ('focus (zk--id-list regexp))
+                    ('search (zk--grep-id-list regexp))
+                    (_ (error "Unknown query type: `%s'" query-type))))
+         (ids (delq nil
+                    (mapcar (lambda (x) (when (member x scope) x))
+                            results)))
          (files (mapcar (lambda (id) (zk--parse-id 'file-path id)) ids)))
     (add-to-history 'zk-search-history regexp)
     (when files
-      (let ((mode-line (zk-index-query-mode-line command regexp)))
+      (let ((mode-line (zk-index-query-mode-line query-type regexp)))
         (setq zk-index-query-mode-line mode-line)
         (zk-index--set-mode-line mode-line)
         (zk-index--reset-mode-name)))
