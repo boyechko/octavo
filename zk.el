@@ -385,13 +385,11 @@ matches, return nil."
 If FILE is not given, get it from variable `buffer-file-name'.
 If STRICT is non-nil, make sure the file is in `zk-directory',
 otherwise just match against `zk-file-name-regexp'."
-  (let ((file (cond ((stringp file) file)
-                    ((null file) buffer-file-name)
-                    ((listp file) (car file))
-                    (t
-                     (signal 'wrong-type-argument '(file))))))
-    (and file
-         (zk--file-id file)
+  (when-let ((file (cond ((stringp file) file)
+                         ((null file) buffer-file-name)
+                         (t
+                          (signal 'wrong-type-argument '(file))))))
+    (and (zk--file-id file)
          (or (not strict)
              (save-match-data
                (file-in-directory-p file zk-directory))))))
