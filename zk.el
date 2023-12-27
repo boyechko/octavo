@@ -344,8 +344,9 @@ Group 2 is the title."
               (filename (file-name-nondirectory file))
               (_ (string-match (zk-file-name-regexp) filename)))
     (cons (match-string 1 filename)
-          (replace-regexp-in-string zk-file-name-separator " "
-                                    (match-string 2 filename)))))
+          (string-trim
+           (replace-regexp-in-string zk-file-name-separator " "
+                                     (match-string 2 filename))))))
 
 (defun zk--file-id (file)
   "Return the ID of the given zk FILE."
@@ -582,9 +583,7 @@ passed to `completion-read'."
 (defun zk--group-function (file transform)
   "TRANSFORM completion candidate FILE to note title."
   (if transform
-      (progn
-        (string-match (zk-file-name-regexp) file)
-        (match-string 2 file))
+      (zk--file-title file)
     "zk"))
 
 (defun zk--id-at-point ()
@@ -597,11 +596,8 @@ passed to `completion-read'."
 (defun zk--alist ()
   "Return an alist ID, title, and file-path triples."
   (mapcar (lambda (file)
-            (when (string-match (zk-file-name-regexp) file)
-              `(,(match-string 1 file)
-                ,(replace-regexp-in-string zk-file-name-separator " "
-                                           (match-string 2 file))
-                ,file)))
+            (let ((id-title (zk--parse-file file)))
+              (list (car id-title) (cdr id-title) file)))
           (zk--directory-files 'full)))
 
 (defun zk--parse-id (target id &optional zk-alist)
@@ -613,10 +609,7 @@ the file system directly via `zk--id-file'."
     (cond ((eq target 'file-path)
            file)
           ((eq target 'title)
-           (if (string-match (zk-file-name-regexp) (file-name-nondirectory file))
-               (match-string 2 (file-name-nondirectory file))
-             (error "Cannot figure out title for file with ID %s: %s"
-                    id (file-name-nondirectory file))))
+           (zk--file-title file))
           (t (error "Invalid target: %s" target)))))
 
 ;;; Formatting
@@ -641,17 +634,12 @@ ARG can be a string (zk-file or zk-id) or a list of such strings."
   "Return formatted list from FILES, according to FORMAT.
 ARG can be zk-file or zk-id as string or list, or single or multiple.
 When NO-PROC is non-nil, bypass `zk--processor'."
-  (let ((files (if no-proc
-                   arg
-                 (zk--processor arg)))
-        items)
-    (dolist (file files)
-      (when (string-match (zk-file-name-regexp) file)
-        (let ((id (match-string 1 file))
-              (title (replace-regexp-in-string zk-file-name-separator " "
-                                               (match-string 2 file))))
-          (push (zk--format format id title) items))))
-    items))
+  (mapcar (lambda (file)
+            (when-let ((id-title (zk--parse-file file)))
+              (zk--format format (car id-title) (cdr id-title))))
+          (if no-proc
+              arg
+            (zk--processor arg))))
 
 (defun zk--formatted-string (arg format)
   "Format a multi-line string from items in ARG, following FORMAT."
@@ -1137,13 +1125,11 @@ Backlinks and Links-in-Note are grouped separately."
 
 (defun zk--network-group-function (file transform)
   "Group FILE by type and TRANSFORM."
-  (if transform
-      (progn
-        (string-match (zk-file-name-regexp) file)
-        (match-string 2 file))
-    (cond
-     ((eq 'backlink (get-text-property 0 'type file)) "Backlinks")
-     ((eq 'link (get-text-property 0 'type file)) "Links-in-Note"))))
+  (cond (transform (zk--file-title file))
+        ((eq 'backlink (get-text-property 0 'type file)) "Backlinks")
+        ((eq 'link (get-text-property 0 'type file)) "Links-in-Note")
+        (t
+         (error "Unexpected condition"))))
 
 ;; (defun zk--network-sort-function (list)
 ;;   "Sort LIST of links so Backlinks group is first."
