@@ -567,14 +567,12 @@ between those positions, inclusive."
    zk-index-last-sort-function))
 
 (defun zk-index--button-at-point-p (&optional pos)
-  "Return zk-id when `zk-index' button is at point.
+  "Return zk-ID when `zk-index' button is at point.
 Takes an option POS position argument."
-  (let ((button (button-at (or pos (point)))))
-    (when (and button
-               (button-has-type-p button 'zk-index))
-      (save-excursion
-        (when (re-search-forward zk-id-regexp)
-          (match-string-no-properties 0))))))
+  (when-let* ((button (button-at (or pos (point))))
+              (_ (button-has-type-p button 'zk-index))
+              (file (button-get button 'button-data)))
+    (ezeka-zk-file-id file)))
 
 (defun zk-index-insert-link (&optional id)
   "Insert zk-link in `other-window' for button ID at point."
