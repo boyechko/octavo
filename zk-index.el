@@ -354,18 +354,16 @@ items listed first.")
   "Return narrowed list of Zk-Files matching REGEXP.
 QUERY-TYPE can be either `FOCUS (filename only) or
 `SEARCH (full text)."
-  (let* ((scope (if (zk-index-narrowed-p (buffer-name))
-                    (zk-index--current-id-list (buffer-name))
-                  (setq zk-index-query-terms nil)
-                  (zk--id-list)))
-         (results (pcase query-type
+  (let* ((scope (when (zk-index-narrowed-p (buffer-name))
+                  (zk-index--current-id-list (buffer-name))))
+         (matches (pcase query-type
                     ('focus (zk--id-list regexp))
                     ('search (zk--grep-id-list regexp))
                     (_ (error "Unknown query type: `%s'" query-type))))
-         (ids (delq nil
-                    (mapcar (lambda (x) (when (member x scope) x))
-                            results)))
-         (files (mapcar (lambda (id) (zk--parse-id 'file-path id)) ids)))
+         (matches (if scope
+                      (cl-intersection scope matches :test #'string=)
+                    matches))
+         (files (mapcar (lambda (id) (zk--parse-id 'file-path id)) matches)))
     (add-to-history 'zk-search-history regexp)
     (when files
       (let ((mode-line (zk-index-query-mode-line query-type regexp)))
