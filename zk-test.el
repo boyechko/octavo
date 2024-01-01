@@ -736,5 +736,29 @@ The return consists of DESCRIPTION and return of
         (goto-char (point-max)))
       (switch-to-buffer-other-window "*ERT Results*"))))
 
+;;;=============================================================================
+;;; zk-index-zk-index--current-id-list
+;;;=============================================================================
+
+(ert-deftest zk-index--current-id-list ()
+  (with-zk-test-environment :numerus ()
+    (should (= 6 (length (zk-index--current-id-list (get-buffer "*Zk-Index: Numerus*") 0 275))))
+    (should (= 6 (length (zk-index--current-id-list (get-buffer "*Zk-Index: Numerus*") 0 310))))
+    (should (= 4592 (length (zk-index--current-id-list (get-buffer "*Zk-Index: Numerus*")))))))
+
+;;;=============================================================================
+;;; zk--find-file and zk-find-file-functions
+;;;=============================================================================
+
+(ert-deftest zk-find-file-functions ()
+  (with-zk-test-environment :numerus ()
+    (let* ((stack '())
+           (sample (car (zk-test-sample-files-for :numerus 'full-path)))
+           (func (lambda (file)
+                   (push file stack))))
+      (add-to-list 'zk-find-file-functions func)
+      (zk--find-file sample)
+      (should (string= (car stack) sample)))))
+
 (provide 'test-zk)
-;;; tests-zk.el ends here
+;;; zk-test.el ends here
