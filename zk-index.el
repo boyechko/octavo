@@ -340,14 +340,14 @@ and formatted with FORMAT-FN (or `zk-index-format-function')."
 
 (defvar zk-index-query-terms nil
   "Ordered list of current query terms.
-Takes form of (COMMAND . TERM), where COMMAND is `ZK-INDEX-FOCUS
-or `ZK-INDEX-SEARCH, and TERM is the query string. Recent
+Takes form of (QUERY-TYPE . REGEXP), where QUERY-TYPE is
+`FOCUS or `SEARCH, and REGEXP is the query string. Recent
 items listed first.")
 
 (defun zk-index-query-files (regexp query-type)
-  "Return narrowed list of notes matching REGEXP.
-QUERY-TYPE can be either 'focus (filename only) or 'search (full
-text)."
+  "Return narrowed list of Zk-Files matching REGEXP.
+QUERY-TYPE can be either `FOCUS (filename only) or
+`SEARCH (full text)."
   (let* ((scope (if (zk-index-narrowed-p (buffer-name))
                     (zk-index--current-id-list (buffer-name))
                   (setq zk-index-query-terms nil)
@@ -382,42 +382,32 @@ text)."
                         zk-index-last-sort-function)
       (setq mode-name mode))))
 
-(defun zk-index-query-mode-line (query-command string)
-  "Generate new mode line after query.
-QUERY-COMMAND is either `zk-index-focus' or `zk-index-search',
-with query term STRING."
-  (push (cons query-command string) zk-index-query-terms)
+(defun zk-index-query-mode-line (query-type regexp)
+  "Generate new mode line after search query.
+QUERY-TYPE is either 'focus or 'search, with query term REGEXP."
+  (push (cons query-type regexp) zk-index-query-terms)
   ;; Sort the different terms into two lists
-  (let (focused
-        searched)
-    (dolist (term zk-index-query-terms)
-      (if (equal (car term) 'zk-index-focus)
-          (push term focused)
-        (push term searched)))
+  (let* ((focused (cl-remove 'search zk-index-query-terms :key 'car))
+         (searched (cl-remove 'focus zk-index-query-terms :key 'car))
+         (formatted (mapcar (lambda (term-list)
+                              (when term-list
+                                ;; (CMD . REGEXP)
+                                (cons (caar term-list)
+                                      (mapconcat #'cdr term-list "\" + \""))))
+                            ;;      CAR     CDR
+                            (list focused searched))))
     ;; Format each list and update appropriate list
-    (let* ((formatted
-            (mapcar (lambda (term-list)
-                      (when term-list
-                        ;; (CMD . STRING)
-                        (cons (caar term-list)
-                              (mapconcat #'cdr term-list "\" + \""))))
-                    ;;      CAR     CDR
-                    (list focused searched))))
-      (concat "["
-              (mapconcat (lambda (query)
-                           (when query
-                             (concat
-                              (capitalize
-                               (caddr
-                                (split-string (symbol-name (car query)) "-")))
-                              ": \""
-                              (cdr query))))
-                         ;; Put the last query type at the end
-                         (sort (remq nil formatted)
-                               (lambda (a _b)
-                                 (not (equal (car a) query-command))))
-                         "\" | ")
-              "\"]"))))
+    (concat "["
+            (mapconcat (lambda (query)
+                         (format "%s: \"%s"
+                                 (capitalize (symbol-name (car query)))
+                                 (cdr query)))
+                       ;; Put the last query type at the end
+                       (sort (remq nil formatted)
+                             (lambda (a _b)
+                               (not (equal (car a) query-type))))
+                       "\" | ")
+            "\"]")))
 
 (defun zk-index--set-mode-line (string)
   "Add STRING to mode-line in `zk-index-mode'."
