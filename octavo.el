@@ -271,14 +271,15 @@ See `octavo-new-note' for details."
   "Return the correct regexp matching Octavo file names.
 The regexp captures these groups:
 
-Group 1 is the Octavo ID.
+Group 1 is the ID.
 Group 2 is the title."
-  (concat "\\(?1:" octavo-id-regexp "\\)"
+  (concat "^"
+          "\\(?1:" octavo-id-regexp "\\)"
           "."
           "\\(?2:" octavo-title-regexp "\\)"
           "\\."
           octavo-file-extension
-          ".*"))
+          "$"))
 
 (defun octavo-link-regexp (&optional id title)
   "Return the correct regexp matching Octavo links.
@@ -290,8 +291,8 @@ The regexp captures these groups:
 Group 1 is the Octavo ID.
 Group 2 is the title."
   (octavo--format (regexp-quote octavo-link-format)
-              (concat "\\(?1:" (or id octavo-id-regexp) "\\)")
-              (concat "\\(?2:" (or title octavo-title-regexp) "\\)")))
+                  (concat "\\(?1:" (or id octavo-id-regexp) "\\)")
+                  (concat "\\(?2:" (or title octavo-title-regexp) "\\)")))
 
 (defun octavo--parse-file (file)
   "If FILE is an Octavo file, return (ID . TITLE); otherwise, nil."
