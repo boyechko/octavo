@@ -1,13 +1,18 @@
-;;; zk.el --- Functions for working with Zettelkasten-style linked notes -*- lexical-binding: t; -*-
+;;; octavo.el --- Functions for working with Zettelkasten-style linked notes -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2022-2023 Grant Rosson
+;; Copyright (C) 2023-2024 Richard Boyechko
 
-;; Author: Grant Rosson <https://github.com/localauthor>
-;; Created: January 4, 2022
+;; Created: June 28, 2023
 ;; License: GPL-3.0-or-later
-;; Version: 0.6
-;; Homepage: https://github.com/localauthor/zk
-;; Package-Requires: ((emacs "25.1"))
+;; Version: 0.1
+;; Homepage: https://github.com/boyechko/octavo
+;; Package-Requires: ((emacs "26.1"))
+
+;; Created by Richard Boyechko based on zk.el by Grant Rosson
+;; Original Author: Grant Rosson <https://github.com/localauthor>
+;; Forked from: https://github.com/localauthor/zk
+;; Original Creation Date: January 4, 2022
+;; Copyright (C) 2022-2023 Grant Rosson
 
 ;; This program is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by the Free
@@ -40,11 +45,11 @@
 ;; form of an ID number enclosed in double-brackets, eg, [[202012091130]]. A
 ;; note's ID number, by default, is a twelve-digit string corresponding to
 ;; the date and time the note was originally created. For example, a note
-;; created on December 9th, 2020 at 11:30 will have the zk ID "202012091130".
+;; created on December 9th, 2020 at 11:30 will have the Octavo ID "202012091130".
 ;; Linking to such a note involves nothing more than placing the string
 ;; [[202012091130]] into another note in the directory.
 
-;; A note's filename is constructed as follows: the zk ID number followed by
+;; A note's filename is constructed as follows: the Octavo ID number followed by
 ;; the title of the note followed by the file extension, e.g. "202012091130
 ;; On the origin of species.txt". A key consequence of this ID/linking scheme
 ;; is that a note's title can change without any existing links to the note
@@ -73,41 +78,41 @@
 
 ;;; Variables
 
-(defgroup zk nil
+(defgroup octavo nil
   "A Zettelkasten implementation for Emacs."
   :group 'text
   :group 'files
-  :prefix "zk-")
+  :prefix "octavo-")
 
 ;; Fundamental variables
 
-(defcustom zk-directory nil
-  "Main zk directory."
+(defcustom octavo-directory nil
+  "Main Octavo directory."
   :type 'string)
 
 ;; Borrowed from Deft by Jason R. Blevins <jblevins@xbeta.org>
-(defcustom zk-directory-recursive nil
-  "Recursively search for files in subdirectories of `zk-directory'.
-If you set this, also consider setting `zk-subdirectory-function'."
+(defcustom octavo-directory-recursive nil
+  "Recursively search for files in subdirectories of `octavo-directory'.
+If you set this, also consider setting `octavo-subdirectory-function'."
   :type 'boolean)
 
-(defcustom zk-directory-recursive-ignore-dir-regexp
+(defcustom octavo-directory-recursive-ignore-dir-regexp
   "\\(?:\\.\\|\\.\\.\\)$"
-  "Regexp for subdirs to be ignored when ‘zk-directory-recursive’ is non-nil."
+  "Regexp for subdirs to be ignored when ‘octavo-directory-recursive’ is non-nil."
   :type 'string)
 
-(defcustom zk-subdirectory-function nil
-  "Function that returns a subdirectory of `zk-directory'.
-Used when `zk-directory-recursive' is non-nil to create new notes
+(defcustom octavo-subdirectory-function nil
+  "Function that returns a subdirectory of `octavo-directory'.
+Used when `octavo-directory-recursive' is non-nil to create new notes
 in the desired subdirectory. When nil, new notes are created in
-`zk-directory'."
+`octavo-directory'."
   :type 'function)
 
-(defcustom zk-file-extension nil
-  "The extension for zk files."
+(defcustom octavo-file-extension nil
+  "The extension for Octavo files."
   :type 'string)
 
-(defcustom zk-file-name-separator " "
+(defcustom octavo-file-name-separator " "
   "Character(s), as a string, to separate elements of filename.
 
 Useful for keeping spaces out of file-names. When set to \"-\",
@@ -116,129 +121,129 @@ for example, the file-name will be in the form
 rendered with spaces."
   :type 'string)
 
-(defcustom zk-id-time-string-format "%Y%m%d%H%M"
-  "Format for new zk IDs.
+(defcustom octavo-id-time-string-format "%Y%m%d%H%M"
+  "Format for new Octavo IDs.
 For supported options,  consult `format-time-string'.
 
-Note: The regexp to find zk IDs is set separately. If you change
-this value, set `zk-id-regexp' so that the zk IDs can be found."
+Note: The regexp to find Octavo IDs is set separately. If you change
+this value, set `octavo-id-regexp' so that the Octavo IDs can be found."
   :type 'string)
 
-(defcustom zk-id-regexp "[0-9]\\{12\\}"
-  "The regular expression used to search for zk IDs.
+(defcustom octavo-id-regexp "[0-9]\\{12\\}"
+  "The regular expression used to search for Octavo IDs.
 Set it so that it matches strings generated with
-`zk-id-time-string-format'. The expression should not
+`octavo-id-time-string-format'. The expression should not
 capture any explicitly numbered groups.
 
-See `zk-file-name-regexp' and `zk-link-regexp' functions for
+See `octavo-file-name-regexp' and `octavo-link-regexp' functions for
 how this regexp is used."
   :type 'regexp)
 
-(defcustom zk-title-regexp ".*?"
-  "The regular expression used to match the zk note's title.
-This is only relevant if `zk-link-format' includes the title."
+(defcustom octavo-title-regexp ".*?"
+  "The regular expression used to match the Octavo note's title.
+This is only relevant if `octavo-link-format' includes the title."
   :type 'regexp)
 
-(defcustom zk-tag-regexp "\\s#[a-zA-Z0-9]\\+"
+(defcustom octavo-tag-regexp "\\s#[a-zA-Z0-9]\\+"
   "The regular expression used to search for tags."
   :type 'regexp)
 
 ;; Function variables
 
-(defcustom zk-new-note-header-function #'zk-new-note-header
-  "Function called by `zk-new-note' to insert header in a new note.
+(defcustom octavo-new-note-header-function #'octavo-new-note-header
+  "Function called by `octavo-new-note' to insert header in a new note.
 A user-defined function should use `insert' to insert a string or
 strings. The arguments NEW-ID, TITLE, and ORIG-ID can be used to
-those corresponding values from `zk-new-note' available for
-insertion. See `zk-new-note-header' for an example."
+those corresponding values from `octavo-new-note' available for
+insertion. See `octavo-new-note-header' for an example."
   :type 'function)
 
-(defcustom zk-select-file-function #'zk--select-file
-  "Function `zk-select-file' uses for selecting a Zk file.
+(defcustom octavo-select-file-function #'octavo--select-file
+  "Function `octavo-select-file' uses for selecting an Octavo file.
 Must take an optional prompt and a list of files. See also
-`zk--select-file' for the default implementation."
+`octavo--select-file' for the default implementation."
   :type 'function)
 
-(defcustom zk-tag-insert-function nil
+(defcustom octavo-tag-insert-function nil
   "Function for inserting tag.
 Function must take a single argument TAG, as a string.
 If nil, tag will be inserted at point."
   :type 'function)
 
-(defcustom zk-search-function #'zk-grep
-  "Function used by `zk-search'.
+(defcustom octavo-search-function #'octavo-grep
+  "Function used by `octavo-search'.
 Must take a single STRING argument."
   :type 'function)
 
-(make-obsolete-variable 'zk-grep-function "The use of the
- 'zk-grep-function' variable is deprecated.
- 'zk-search-function' should be used instead"
+(make-obsolete-variable 'octavo-grep-function "The use of the
+ 'octavo-grep-function' variable is deprecated.
+ 'octavo-search-function' should be used instead"
                         "0.5")
 
-(defcustom zk-tag-search-function #'zk-grep
-  "Function used by `zk-tag-search'.
+(defcustom octavo-tag-search-function #'octavo-grep
+  "Function used by `octavo-tag-search'.
 Must take a single STRING argument."
   :type 'function)
 
-(make-obsolete-variable 'zk-tag-grep-function "The use of the
-  'zk-tag-grep-function' variable is deprecated.
- 'zk-tag-search-function' should be used instead"
+(make-obsolete-variable 'octavo-tag-grep-function "The use of the
+  'octavo-tag-grep-function' variable is deprecated.
+ 'octavo-tag-search-function' should be used instead"
                         "0.5")
 
-(defcustom zk-current-notes-function nil
+(defcustom octavo-current-notes-function nil
   "User-defined function for listing currently open notes.
-See `zk-current-notes' for details."
+See `octavo-current-notes' for details."
   :type 'function)
 
-(defcustom zk-format-function #'zk-format-id-and-title
-  "Function for formatting zk file information.
+(defcustom octavo-format-function #'octavo-format-id-and-title
+  "Function for formatting Octavo file information.
 It should accept three variables: FORMAT-SPEC, ID, and TITLE.
-See `zk-format-id-and-title' for an example."
+See `octavo-format-id-and-title' for an example."
   :type 'function)
 
 ;; Format variables
 
-(defcustom zk-link-format "[[%i]]"
+(defcustom octavo-link-format "[[%i]]"
   "Format for inserted links.
 
-See `zk-format-id-and-title' for what the default control
+See `octavo-format-id-and-title' for what the default control
 sequences mean."
   :type 'string)
 
-(defcustom zk-link-and-title-format "%t [[%i]]"
+(defcustom octavo-link-and-title-format "%t [[%i]]"
   "Format for link and title when inserted to together.
 
-See `zk-format-id-and-title' for what the default control
+See `octavo-format-id-and-title' for what the default control
 sequences mean."
   :type 'string)
 
-(defcustom zk-completion-at-point-format "[[%i]] %t"
-  "Format for completion table used by `zk-completion-at-point'.
+(defcustom octavo-completion-at-point-format "[[%i]] %t"
+  "Format for completion table used by `octavo-completion-at-point'.
 
-See `zk-format-id-and-title' for what the default control
+See `octavo-format-id-and-title' for what the default control
 sequences mean."
   :type 'string)
 
 ;; Link variables
 
-(defcustom zk-new-note-link-insert 'ask
-  "Should `zk-new-note' insert link to new note at point?
+(defcustom octavo-new-note-link-insert 'ask
+  "Should `octavo-new-note' insert link to new note at point?
 
 Options:
 1. t - Always insert a link
-2. `zk - Insert link only inside an existing note
+2. `octavo - Insert link only inside an existing note
 3. `ask - Ask user, yes or no
 4. nil - Never insert a link
 
-Calling `zk-new-note' with a prefix-argument inserts a link
-regardless of how `zk-new-note-link-insert' is set."
+Calling `octavo-new-note' with a prefix-argument inserts a link
+regardless of how `octavo-new-note-link-insert' is set."
   :type '(choice (const :tag "Always" t)
                  (const :tag "Ask" ask)
-                 (const :tag "Only in zk notes" zk)
+                 (const :tag "Only in Octavo notes" octavo)
                  (const :tag "Never" nil)))
 
-(defcustom zk-link-and-title t
-  "Should `zk-insert-link' insert both link and title?
+(defcustom octavo-link-and-title t
+  "Should `octavo-insert-link' insert both link and title?
 
 Options:
 1. t - Always inserts link and title; with `prefix-arg', only link
@@ -246,129 +251,129 @@ Options:
 3. nil - Only insert link, not title; with `prefix-arg', include title
 
 The format in which link and title are inserted can be configured
-by setting the variable `zk-link-and-title-format'."
+by setting the variable `octavo-link-and-title-format'."
   :type '(choice (const :tag "Always" t)
                  (const :tag "Ask" ask)
                  (const :tag "Never" nil)))
 
-(defcustom zk-enable-link-buttons t
-  "When non-nil, valid zk-id links will be clickable buttons.
-Allows `zk-make-link-buttons' to be added to `find-file-hook', so
+(defcustom octavo-enable-link-buttons t
+  "When non-nil, valid octavo-id links will be clickable buttons.
+Allows `octavo-make-link-buttons' to be added to `find-file-hook', so
 buttons will be automatically created when a note is opened."
   :type 'boolean)
 
-(defcustom zk-default-backlink nil
-  "When non-nil, should be a single zk ID.
-See `zk-new-note' for details."
+(defcustom octavo-default-backlink nil
+  "When non-nil, should be a single Octavo ID.
+See `octavo-new-note' for details."
   :type 'string)
 
-(defvar zk-file-history nil)
-(defvar zk-search-history nil)
+(defvar octavo-file-history nil)
+(defvar octavo-search-history nil)
 
 ;;; Embark Integration
 
-(defvar zk-id-map
+(defvar octavo-id-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'zk-follow-link-at-point)
-    (define-key map (kbd "k") #'zk-copy-link-and-title)
-    (define-key map (kbd "s") #'zk-search)
+    (define-key map (kbd "RET") #'octavo-follow-link-at-point)
+    (define-key map (kbd "k") #'octavo-copy-link-and-title)
+    (define-key map (kbd "s") #'octavo-search)
     map)
-  "Keymap for Embark zk-id at-point actions.")
+  "Keymap for Embark octavo-id at-point actions.")
 
-(defvar zk-file-map
+(defvar octavo-file-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "i") #'zk-insert-link)
-    (define-key map (kbd "f") #'zk-find-file)
-    (define-key map (kbd "k") #'zk-copy-link-and-title)
+    (define-key map (kbd "i") #'octavo-insert-link)
+    (define-key map (kbd "f") #'octavo-find-file)
+    (define-key map (kbd "k") #'octavo-copy-link-and-title)
     map)
-  "Keymap for Embark zk-file minibuffer actions.")
+  "Keymap for Embark octavo-file minibuffer actions.")
 
 ;;;###autoload
-(defun zk-embark-target-zk-id-at-point ()
-  "Target zk-id at point."
-  (when (thing-at-point-looking-at zk-id-regexp)
-    (let ((zk-id (match-string-no-properties 0)))
-      `(zk-id ,zk-id . ,(bounds-of-thing-at-point 'symbol)))))
+(defun octavo-embark-target-octavo-id-at-point ()
+  "Target octavo-id at point."
+  (when (thing-at-point-looking-at octavo-id-regexp)
+    (let ((octavo-id (match-string-no-properties 0)))
+      `(octavo-id ,octavo-id . ,(bounds-of-thing-at-point 'symbol)))))
 
 ;;;###autoload
-(defun zk-setup-embark ()
-  "Setup Embark integration for zk.
-Adds zk-id as an Embark target, and adds `zk-id-map' and
-`zk-file-map' to `embark-keymap-alist'."
+(defun octavo-setup-embark ()
+  "Setup Embark integration for Octavo.
+Adds octavo-id as an Embark target, and adds `octavo-id-map' and
+`octavo-file-map' to `embark-keymap-alist'."
   (with-eval-after-load 'embark
-    (add-to-list 'embark-multitarget-actions 'zk-copy-link-and-title)
-    (add-to-list 'embark-multitarget-actions 'zk-insert-link)
-    (add-to-list 'embark-target-finders 'zk-embark-target-zk-id-at-point)
-    (add-to-list 'embark-keymap-alist '(zk-id . zk-id-map))
-    (add-to-list 'embark-keymap-alist '(zk-file . zk-file-map))
-    (set-keymap-parent zk-id-map embark-general-map)
-    (set-keymap-parent zk-file-map embark-file-map)))
+    (add-to-list 'embark-multitarget-actions 'octavo-copy-link-and-title)
+    (add-to-list 'embark-multitarget-actions 'octavo-insert-link)
+    (add-to-list 'embark-target-finders 'octavo-embark-target-octavo-id-at-point)
+    (add-to-list 'embark-keymap-alist '(octavo-id . octavo-id-map))
+    (add-to-list 'embark-keymap-alist '(octavo-file . octavo-file-map))
+    (set-keymap-parent octavo-id-map embark-general-map)
+    (set-keymap-parent octavo-file-map embark-file-map)))
 
 ;;; Low-Level Functions
 
-(defun zk--singleton-p (list)
+(defun octavo--singleton-p (list)
   "Return non-NIL if LIST is not null, is a list, and has a single element."
   (and list
        (listp list)
        (null (cdr list))))
 
-(defun zk-file-name-regexp ()
-  "Return the correct regexp matching zk file names.
+(defun octavo-file-name-regexp ()
+  "Return the correct regexp matching Octavo file names.
 The regexp captures these groups:
 
-Group 1 is the zk ID.
+Group 1 is the Octavo ID.
 Group 2 is the title."
-  (concat "\\(?1:" zk-id-regexp "\\)"
+  (concat "\\(?1:" octavo-id-regexp "\\)"
           "."
-          "\\(?2:" zk-title-regexp "\\)"
+          "\\(?2:" octavo-title-regexp "\\)"
           "\\."
-          zk-file-extension
+          octavo-file-extension
           ".*"))
 
-(defun zk-link-regexp (&optional id title)
-  "Return the correct regexp matching zk links.
+(defun octavo-link-regexp (&optional id title)
+  "Return the correct regexp matching Octavo links.
 If ID and/or TITLE are given, use those, generating a regexp
-that specifically matches them. Othewrise use `zk-id-regexp'
-and `zk-title-regexp', respectively.
+that specifically matches them. Othewrise use `octavo-id-regexp'
+and `octavo-title-regexp', respectively.
 The regexp captures these groups:
 
-Group 1 is the zk ID.
+Group 1 is the Octavo ID.
 Group 2 is the title."
-  (zk--format (regexp-quote zk-link-format)
-              (concat "\\(?1:" (or id zk-id-regexp) "\\)")
-              (concat "\\(?2:" (or title zk-title-regexp) "\\)")))
+  (octavo--format (regexp-quote octavo-link-format)
+              (concat "\\(?1:" (or id octavo-id-regexp) "\\)")
+              (concat "\\(?2:" (or title octavo-title-regexp) "\\)")))
 
-(defun zk--parse-file (file)
-  "If FILE is a Zk-file, return (ID . TITLE); otherwise, nil."
+(defun octavo--parse-file (file)
+  "If FILE is an Octavo file, return (ID . TITLE); otherwise, nil."
   (when-let* ((_ (stringp file))
               (filename (file-name-nondirectory file))
-              (_ (string-match (zk-file-name-regexp) filename)))
+              (_ (string-match (octavo-file-name-regexp) filename)))
     (cons (match-string 1 filename)
           (string-trim
-           (replace-regexp-in-string zk-file-name-separator " "
+           (replace-regexp-in-string octavo-file-name-separator " "
                                      (match-string 2 filename))))))
 
-(defun zk--file-id (file)
-  "Return the ID of the given zk FILE."
-  (car (zk--parse-file file)))
+(defun octavo--file-id (file)
+  "Return the ID of the given Octavo FILE."
+  (car (octavo--parse-file file)))
 
-(defun zk--file-title (file)
-  "Return the title of the given zk FILE."
-  (cdr (zk--parse-file file)))
+(defun octavo--file-title (file)
+  "Return the title of the given Octavo FILE."
+  (cdr (octavo--parse-file file)))
 
-(defun zk--id-file (id)
-  "Return the full file path for the existing zk note with ID.
+(defun octavo--id-file (id)
+  "Return the full file path for the existing Octavo note with ID.
 Use wildcards to match files against the ID, signalling an error if
 there are multiple matches (so ID is not unique). If there are no
 matches, return nil."
-  (let* ((wild-base-name (format "%s*.%s" id zk-file-extension))
+  (let* ((wild-base-name (format "%s*.%s" id octavo-file-extension))
          (matches (file-expand-wildcards
-                   (concat (file-name-as-directory zk-directory)
-                           (when (functionp zk-subdirectory-function)
+                   (concat (file-name-as-directory octavo-directory)
+                           (when (functionp octavo-subdirectory-function)
                              (file-name-as-directory
-                              (funcall zk-subdirectory-function id)))
+                              (funcall octavo-subdirectory-function id)))
                            wild-base-name))))
-    (cond ((zk--singleton-p matches)
+    (cond ((octavo--singleton-p matches)
            (expand-file-name (car matches)))
           ((null matches)
            nil)
@@ -377,109 +382,109 @@ matches, return nil."
                   (length matches)
                   id)))))
 
-(defalias 'zk-id-p 'zk--id-file)
-(make-obsolete 'zk-id-p 'zk--id-file "0.6")
+(defalias 'octavo-id-p 'octavo--id-file)
+(make-obsolete 'octavo-id-p 'octavo--id-file "0.6")
 
-(defun zk-file-p (&optional file strict)
-  "Return t if FILE is a zk-file.
+(defun octavo-file-p (&optional file strict)
+  "Return t if FILE is an Octavo file.
 If FILE is not given, get it from variable `buffer-file-name'.
-If STRICT is non-nil, make sure the file is in `zk-directory',
-otherwise just match against `zk-file-name-regexp'."
+If STRICT is non-nil, make sure the file is in `octavo-directory',
+otherwise just match against `octavo-file-name-regexp'."
   (when-let ((file (cond ((stringp file) file)
                          ((null file) buffer-file-name)
                          (t
                           (signal 'wrong-type-argument '(file))))))
-    (and (zk--file-id file)
+    (and (octavo--file-id file)
          (or (not strict)
              (save-match-data
-               (file-in-directory-p file zk-directory))))))
+               (file-in-directory-p file octavo-directory))))))
 
-(defun zk--generate-id ()
-  "Generate and return a zk ID.
-The ID is created using `zk-id-time-string-format'."
-  (let ((id (format-time-string zk-id-time-string-format)))
-    (while (zk--id-file id)
+(defun octavo--generate-id ()
+  "Generate and return an Octavo ID.
+The ID is created using `octavo-id-time-string-format'."
+  (let ((id (format-time-string octavo-id-time-string-format)))
+    (while (octavo--id-file id)
       (setq id (number-to-string (1+ (string-to-number id)))))
     id))
 
-(defun zk--id-list (&optional regexp zk-alist)
-  "Return a list of zk IDs for notes in `zk-directory'.
+(defun octavo--id-list (&optional regexp octavo-alist)
+  "Return a list of Octavo IDs for notes in `octavo-directory'.
 If REGEXP is non-nil, only include notes whose IDs or titles
-match; ignore case. If ZK-ALIST is non-nil, use it."
-  (if (or regexp zk-alist)
-      (let ((zk-alist (or zk-alist (zk--alist)))
+match; ignore case. If OCTAVO-ALIST is non-nil, use it."
+  (if (or regexp octavo-alist)
+      (let ((octavo-alist (or octavo-alist (octavo--alist)))
             (case-fold-search t)
             (ids))
-        (dolist (item zk-alist)
+        (dolist (item octavo-alist)
           (if regexp
               (when (or (string-match regexp (car item))
                         (string-match regexp (cadr item)))
                 (push (car item) ids))
             (push (car item) ids)))
         ids)
-    (mapcar 'zk--file-id (zk--directory-files 'full))))
+    (mapcar 'octavo--file-id (octavo--directory-files 'full))))
 
-(defun zk--current-id ()
-  "Return the ID of zk note in current buffer."
-  (or (zk--file-id buffer-file-name)
-      (user-error "Not a zk file")))
-(make-obsolete 'zk--current-id 'zk--file-id "0.5")
+(defun octavo--current-id ()
+  "Return the ID of Octavo in current buffer."
+  (or (octavo--file-id buffer-file-name)
+      (user-error "Not an Octavo file")))
+(make-obsolete 'octavo--current-id 'octavo--file-id "0.5")
 
-(defvar zk--directory-files-cache nil
-  "Store the result of `zk--directory-files' to prevent re-scanning.
+(defvar octavo--directory-files-cache nil
+  "Store the result of `octavo--directory-files' to prevent re-scanning.
 This is an alist with key [DIRECTORY FULL REGEXP] and list
 of FILES as value.")
 
-(defun zk--directory-files-cache-key-equal (key1 key2)
+(defun octavo--directory-files-cache-key-equal (key1 key2)
   "Return non-nil if KEY1 and KEY2 are the same."
   (and (string= (elt key1 0) (elt key2 0))
        (eq (elt key1 1) (elt key2 1))
        (string= (elt key1 2) (elt key2 2))))
 
-(defmacro zk--directory-files-cached (&optional directory full regexp)
+(defmacro octavo--directory-files-cached (&optional directory full regexp)
   "Return the cached file list for DIRECTORY, FULL, and REGEXP.
-DIRECTORY defaults to `zk-directory'."
-  `(alist-get (vector (or ,directory zk-directory) ,full ,regexp)
-              zk--directory-files-cache
-              nil nil #'zk--directory-files-cache-key-equal))
+DIRECTORY defaults to `octavo-directory'."
+  `(alist-get (vector (or ,directory octavo-directory) ,full ,regexp)
+              octavo--directory-files-cache
+              nil nil #'octavo--directory-files-cache-key-equal))
 
-(defun zk--directory-files (&optional full regexp refresh)
-  "Return list of zk-files in `zk-directory'.
+(defun octavo--directory-files (&optional full regexp refresh)
+  "Return list of octavo-files in `octavo-directory'.
 Excludes lockfiles, autosave files, and backup files. When
 FULL is non-nil, return full file-paths. If REGEXP is non-nil,
-it must be a regexp to replace the default, `zk-id-regexp'.
+it must be a regexp to replace the default, `octavo-id-regexp'.
 With REFRESH, rescan the file system and update the cache.
 
-When `zk-directory-recursive' is non-nil, searches recursively in
-subdirectories of `zk-directory' (except those matching
-`zk-directory-recursive-ignore-dir-regexp') and returns full
+When `octavo-directory-recursive' is non-nil, searches recursively in
+subdirectories of `octavo-directory' (except those matching
+`octavo-directory-recursive-ignore-dir-regexp') and returns full
 file-paths."
-  (let* ((regexp (or regexp zk-id-regexp)))
+  (let* ((regexp (or regexp octavo-id-regexp)))
     (garbage-collect)                   ; prevents eventual slowdown
     (or (and (not refresh)
-             (zk--directory-files-cached zk-directory full regexp))
-        (setf (zk--directory-files-cached zk-directory full regexp)
-              (seq-filter #'zk-file-p
-                          (if (not zk-directory-recursive)
-                              (directory-files zk-directory full regexp)
+             (octavo--directory-files-cached octavo-directory full regexp))
+        (setf (octavo--directory-files-cached octavo-directory full regexp)
+              (seq-filter #'octavo-file-p
+                          (if (not octavo-directory-recursive)
+                              (directory-files octavo-directory full regexp)
                             (directory-files-recursively
-                             zk-directory regexp nil
+                             octavo-directory regexp nil
                              (lambda (dir)
                                (not (string-match
-                                     zk-directory-recursive-ignore-dir-regexp
+                                     octavo-directory-recursive-ignore-dir-regexp
                                      dir))))))))))
 
-(defun zk--current-notes-list ()
+(defun octavo--current-notes-list ()
   "Return list of files for currently open notes."
   (remq nil
         (mapcar
          (lambda (x)
            (when (and (buffer-file-name x)
-                      (zk-file-p (buffer-file-name x)))
+                      (octavo-file-p (buffer-file-name x)))
              (buffer-file-name x)))
          (buffer-list))))
 
-(defun zk--posix-regexp (regexp &optional basic)
+(defun octavo--posix-regexp (regexp &optional basic)
   "Convert Elisp-style REGEXP to extended POSIX 1003.2 regexp.
 If BASIC is non-nil, convert as much as possible to basic
 regexp instead. See manual page `re_format(7)' for details."
@@ -502,7 +507,7 @@ regexp instead. See manual page `re_format(7)' for details."
         (replace-regexp-in-string "\\\\\\([(){}+|]\\)" "\\1" result)))
     result))
 
-(defun zk--grep-command (regexp &rest other-options)
+(defun octavo--grep-command (regexp &rest other-options)
   "Return a list of files containing REGEXP.
 Any remaining OTHER-OPTIONS should be strings that will be
 passed directly to `grep' command."
@@ -512,57 +517,57 @@ passed directly to `grep' command."
       (append (list "egrep"
                     "--recursive"
                     "--ignore-case"
-                    (concat "--include=\\*." zk-file-extension)
+                    (concat "--include=\\*." octavo-file-extension)
                     (concat "--regexp="
-                            (shell-quote-argument (zk--posix-regexp regexp)))
-                      zk-directory
+                            (shell-quote-argument (octavo--posix-regexp regexp)))
+                      octavo-directory
                       "2>/dev/null")
                 other-options)
         " "))
      "\n" 'omit-nulls "\s"))
 
-(defun zk--grep-file-list (regexp &optional invert)
+(defun octavo--grep-file-list (regexp &optional invert)
   "Return a list of files containing REGEXP.
 If INVERT is non-nil, return list of files *not* matching."
-  (zk--grep-command regexp
+  (octavo--grep-command regexp
                     (if invert
                         "--files-without-match"
                       "--files-with-matches")))
 
-(defun zk--grep-id-list (regexp &optional invert)
+(defun octavo--grep-id-list (regexp &optional invert)
   "Return a list of IDs for files containing REGEXP.
 If INVERT is non-nil, return list of files *not* matching."
-  (let ((ids (mapcar #'zk--file-id (zk--grep-file-list regexp invert))))
+  (let ((ids (mapcar #'octavo--file-id (octavo--grep-file-list regexp invert))))
     (if (stringp ids)
         (list ids)
       ids)))
 
-(defun zk--grep-match-list (regexp &optional unique)
-  "Return list of matches for REGEXP from notes in `zk-directory'.
+(defun octavo--grep-match-list (regexp &optional unique)
+  "Return list of matches for REGEXP from notes in `octavo-directory'.
 If UNIQUE is non-nil, remove duplicate matches."
-  (let ((result (zk--grep-command regexp
+  (let ((result (octavo--grep-command regexp
                                   "--only-matching"
                                   "--no-filename")))
     (if unique
         (delete-dups result)
       result)))
 
-(defun zk--grep-tag-list ()
-  "Return list of tags from all notes in zk directory.
-What counts as a tag depends on `zk-tag-regexp'."
-  (zk--grep-match-list zk-tag-regexp 'unique))
+(defun octavo--grep-tag-list ()
+  "Return list of tags from all notes in Octavo directory.
+What counts as a tag depends on `octavo-tag-regexp'."
+  (octavo--grep-match-list octavo-tag-regexp 'unique))
 
-(defun zk-select-file (&optional prompt files &rest args)
-  "Call `zk-select-file-function', passing PROMPT, FILES, and ARGS to it."
-  (apply zk-select-file-function prompt files `,@args))
+(defun octavo-select-file (&optional prompt files &rest args)
+  "Call `octavo-select-file-function', passing PROMPT, FILES, and ARGS to it."
+  (apply octavo-select-file-function prompt files `,@args))
 
-(defun zk--select-file (&optional prompt files group sort initial-input)
-  "Select a zk-file with `completing-read' showing PROMPT.
+(defun octavo--select-file (&optional prompt files group sort initial-input)
+  "Select an Octavo file with `completing-read' showing PROMPT.
 Offers candidates from list of FILES, if supplied, or from
-`zk--directory-files'. INITIAL-INPUT, GROUP and SORT are
+`octavo--directory-files'. INITIAL-INPUT, GROUP and SORT are
 passed to `completion-read'."
-  (let* ((files (or files (zk--directory-files 'full)))
-         (group (or group 'zk--group-function))
+  (let* ((files (or files (octavo--directory-files 'full)))
+         (group (or group 'octavo--group-function))
          (sort (or sort nil)))
     (completing-read (or prompt "Select Zettel: ")
                      (lambda (string predicate action)
@@ -570,163 +575,163 @@ passed to `completion-read'."
                            `(metadata
                              (group-function . ,group)
                              (display-sort-function . ,sort)
-                             (category . zk-file))
+                             (category . octavo-file))
                          (complete-with-action action files string predicate)))
-                     nil t initial-input 'zk-file-history)))
+                     nil t initial-input 'octavo-file-history)))
 
-(defun zk--group-function (file transform)
+(defun octavo--group-function (file transform)
   "TRANSFORM completion candidate FILE to note title."
   (if transform
-      (zk--file-title file)
-    "zk"))
+      (octavo--file-title file)
+    "octavo"))
 
-(defun zk--id-at-point ()
+(defun octavo--id-at-point ()
   "Return ID at point."
-  (cond ((thing-at-point-looking-at zk-id-regexp)
+  (cond ((thing-at-point-looking-at octavo-id-regexp)
          (match-string-no-properties 0))
-        ((thing-at-point-looking-at (zk-link-regexp))
+        ((thing-at-point-looking-at (octavo-link-regexp))
          (match-string-no-properties 1))))
 
-(defun zk--alist ()
+(defun octavo--alist ()
   "Return an alist ID, title, and file-path triples."
   (mapcar (lambda (file)
-            (let ((id-title (zk--parse-file file)))
+            (let ((id-title (octavo--parse-file file)))
               (list (car id-title) (cdr id-title) file)))
-          (zk--directory-files 'full)))
+          (octavo--directory-files 'full)))
 
-(defun zk--parse-id (target id &optional zk-alist)
+(defun octavo--parse-id (target id &optional octavo-alist)
   "Return TARGET, either `file-path or `title, from file with ID.
-Takes a single ID, as a string. Takes an optional ZK-ALIST, for
+Takes a single ID, as a string. Takes an optional OCTAVO-ALIST, for
 backward compatibility, but ignores it in favor of checking against
-the file system directly via `zk--id-file'."
-  (let ((file (zk--id-file id)))
+the file system directly via `octavo--id-file'."
+  (let ((file (octavo--id-file id)))
     (cond ((eq target 'file-path)
            file)
           ((eq target 'title)
-           (zk--file-title file))
+           (octavo--file-title file))
           (t (error "Invalid target: %s" target)))))
 
 ;;; Formatting
 
-(defun zk--processor (arg)
-  "Process ARG into a list of zk-files.
-ARG can be a string (zk-file or zk-id) or a list of such strings."
-  (let* ((zk-alist (zk--alist))
+(defun octavo--processor (arg)
+  "Process ARG into a list of octavo-files.
+ARG can be a string (octavo-file or octavo-id) or a list of such strings."
+  (let* ((octavo-alist (octavo--alist))
          (process-single-arg
           (lambda (single-arg)
-            (if (zk-file-p single-arg)
+            (if (octavo-file-p single-arg)
                 single-arg
-              (zk--parse-id 'file-path single-arg zk-alist)))))
-    (cond ((stringp arg)                ; Single zk-file or zk-id as string
+              (octavo--parse-id 'file-path single-arg octavo-alist)))))
+    (cond ((stringp arg)                ; Single octavo-file or octavo-id as string
            (list (funcall process-single-arg arg)))
-          ((listp arg)                  ; List of zk-files or zk-ids
+          ((listp arg)                  ; List of octavo-files or octavo-ids
            (mapcar process-single-arg arg))
           (t
            (signal 'wrong-type-argument (list 'list-or-string-p arg))))))
 
-(defun zk--formatter (arg format &optional no-proc)
+(defun octavo--formatter (arg format &optional no-proc)
   "Return formatted list from FILES, according to FORMAT.
-ARG can be zk-file or zk-id as string or list, or single or multiple.
-When NO-PROC is non-nil, bypass `zk--processor'."
+ARG can be octavo-file or octavo-id as string or list, or single or multiple.
+When NO-PROC is non-nil, bypass `octavo--processor'."
   (mapcar (lambda (file)
-            (when-let ((id-title (zk--parse-file file)))
-              (zk--format format (car id-title) (cdr id-title))))
+            (when-let ((id-title (octavo--parse-file file)))
+              (octavo--format format (car id-title) (cdr id-title))))
           (if no-proc
               arg
-            (zk--processor arg))))
+            (octavo--processor arg))))
 
-(defun zk--formatted-string (arg format)
+(defun octavo--formatted-string (arg format)
   "Format a multi-line string from items in ARG, following FORMAT."
-  (let ((items (zk--formatter arg format)))
+  (let ((items (octavo--formatter arg format)))
     (mapconcat #'identity items "\n\n")))
 
-(defun zk-format-id-and-title (format id title)
+(defun octavo-format-id-and-title (format id title)
   "Format ID and TITLE based on the `format-spec' FORMAT.
 The sequence `%t' in FORMAT is replaced with the TITLE
 and `%i' with the ID. This is the default function
-that `zk-format-function' is set to."
+that `octavo-format-function' is set to."
   (format-spec format `((?i . ,id) (?t . ,title))))
 
-(defun zk--format (format id title)
+(defun octavo--format (format id title)
   "Format ID and TITLE based on the `format-spec' FORMAT.
-This is a wrapper around `zk-format-function', which see."
-  (funcall zk-format-function format id title))
+This is a wrapper around `octavo-format-function', which see."
+  (funcall octavo-format-function format id title))
 
 ;;; Buttons
 
-(defun zk-setup-auto-link-buttons ()
-  "Enable automatic link creation when zk-file is opened.
-Adds `zk-make-link-buttons' to `find-file-hook.'"
-  (setq zk-enable-link-buttons t)
-  (add-hook 'find-file-hook #'zk-make-link-buttons))
+(defun octavo-setup-auto-link-buttons ()
+  "Enable automatic link creation when octavo-file is opened.
+Adds `octavo-make-link-buttons' to `find-file-hook.'"
+  (setq octavo-enable-link-buttons t)
+  (add-hook 'find-file-hook #'octavo-make-link-buttons))
 
-(defun zk-button-help-echo (_win obj pos)
-  "Return a string of help-echo for `zk-link' button.
+(defun octavo-button-help-echo (_win obj pos)
+  "Return a string of help-echo for `octavo-link' button.
 _WIN is the current window; OBJ is the button itself; POS is
 the starting position of the button."
-  (zk--parse-id 'title (button-label (or obj (button-at pos)))))
+  (octavo--parse-id 'title (button-label (or obj (button-at pos)))))
 
 (eval-and-compile
-  (define-button-type 'zk-link
-    'action 'zk-follow-link-at-point
+  (define-button-type 'octavo-link
+    'action 'octavo-follow-link-at-point
     'follow-link t
-    'face 'zk-desktop-button
-    'help-echo 'zk-button-help-echo))
+    'face 'octavo-desktop-button
+    'help-echo 'octavo-button-help-echo))
 
-(defun zk-make-link-buttons ()
-  "Make Zk links in current buffer into `zk-link' buttons."
+(defun octavo-make-link-buttons ()
+  "Make Octavo links in current buffer into `octavo-link' buttons."
   (interactive)
-  (when (and (zk-file-p) zk-enable-link-buttons)
-    (remove-overlays (point-min) (point-max) 'type 'zk-link)
-    (let* ((zk-alist (zk--alist))
-           (ids (zk--id-list nil zk-alist)))
+  (when (and (octavo-file-p) octavo-enable-link-buttons)
+    (remove-overlays (point-min) (point-max) 'type 'octavo-link)
+    (let* ((octavo-alist (octavo--alist))
+           (ids (octavo--id-list nil octavo-alist)))
       (save-excursion
         (goto-char (point-min))
-        (while (re-search-forward (zk-link-regexp) nil t)
+        (while (re-search-forward (octavo-link-regexp) nil t)
           (let ((beg (match-beginning 1))
                 (end (match-end 1))
                 (id (match-string-no-properties 1)))
             (when (member id ids)
-              ;; Since we have zk-alist handy, might as well set the buttons'
-              ;; help-echo to a static string rather than having `zk-button-
+              ;; Since we have octavo-alist handy, might as well set the buttons'
+              ;; help-echo to a static string rather than having `octavo-button-
               ;; help-echo' have to parse again.
               (make-button beg end
-                           'type 'zk-link
+                           'type 'octavo-link
                             'help-echo
-                           (zk--parse-id 'title id zk-alist)))))))))
+                           (octavo--parse-id 'title id octavo-alist)))))))))
 
-(defun zk-make-button-before-point ()
-  "Find `zk-link-regexp' before point and make it a zk-link button."
+(defun octavo-make-button-before-point ()
+  "Find `octavo-link-regexp' before point and make it an octavo-link button."
   (interactive)
   (save-excursion
-    (re-search-backward (zk-link-regexp) (line-beginning-position))
+    (re-search-backward (octavo-link-regexp) (line-beginning-position))
     (make-button (match-beginning 1) (match-end 1)
-                 'type 'zk-link)))
+                 'type 'octavo-link)))
 
 ;;; Note Functions
 
-(defun zk--note-file-path (id title)
+(defun octavo--note-file-path (id title)
   "Generate full file-path for note with given ID and TITLE."
   (let ((base-name (format "%s%s%s.%s"
                            id
-                           zk-file-name-separator
+                           octavo-file-name-separator
                            title
-                           zk-file-extension)))
-    (concat (file-name-as-directory zk-directory)
-            (when (functionp zk-subdirectory-function)
-              (file-name-as-directory (funcall zk-subdirectory-function id)))
+                           octavo-file-extension)))
+    (concat (file-name-as-directory octavo-directory)
+            (when (functionp octavo-subdirectory-function)
+              (file-name-as-directory (funcall octavo-subdirectory-function id)))
             (replace-regexp-in-string " "
-                                      zk-file-name-separator
+                                      octavo-file-name-separator
                                       base-name))))
 
 ;;;###autoload
-(defun zk-new-note (&optional title)
+(defun octavo-new-note (&optional title)
   "Create a new note, insert link at point of creation.
 Optional TITLE argument."
   (interactive)
   (let* ((pref-arg current-prefix-arg)
-         (new-id (zk--generate-id))
-         (orig-id (ignore-errors (zk--file-id buffer-file-name)))
+         (new-id (octavo--generate-id))
+         (orig-id (ignore-errors (octavo--file-id buffer-file-name)))
          (text (when (use-region-p)
                  (buffer-substring
                   (region-beginning)
@@ -748,40 +753,40 @@ Optional TITLE argument."
                    (buffer-substring
                     (point)
                     (point-max)))))
-         (file-name (zk--note-file-path new-id title)))
+         (file-name (octavo--note-file-path new-id title)))
     (unless orig-id
-      (setq orig-id zk-default-backlink))
+      (setq orig-id octavo-default-backlink))
     (when (use-region-p)
       (kill-region (region-beginning) (region-end)))
     (when (or pref-arg
-              (eq zk-new-note-link-insert 't)
-              (and (eq zk-new-note-link-insert 'zk)
-                   (zk-file-p))
-              (and (eq zk-new-note-link-insert 'ask)
+              (eq octavo-new-note-link-insert 't)
+              (and (eq octavo-new-note-link-insert 'octavo)
+                   (octavo-file-p))
+              (and (eq octavo-new-note-link-insert 'ask)
                    (y-or-n-p "Insert link at point? ")))
       (unless buffer-read-only
-        (zk-insert-link new-id title)))
+        (octavo-insert-link new-id title)))
     (when buffer-file-name
       (save-buffer))
     (find-file file-name)
-    (funcall zk-new-note-header-function title new-id orig-id)
+    (funcall octavo-new-note-header-function title new-id orig-id)
     (when body (insert body))
-    (when zk-enable-link-buttons (zk-make-link-buttons))
+    (when octavo-enable-link-buttons (octavo-make-link-buttons))
     (save-buffer)))
 
-(defun zk-new-note-header (title new-id &optional orig-id)
+(defun octavo-new-note-header (title new-id &optional orig-id)
   "Insert header in new notes with args TITLE and NEW-ID.
 Optionally use ORIG-ID for backlink."
   (insert (format "# %s %s\n===\ntags: \n" new-id title))
-  (when (ignore-errors (zk--parse-id 'title orig-id)) ;; check for file
+  (when (ignore-errors (octavo--parse-id 'title orig-id)) ;; check for file
     (progn
       (insert "===\n<- ")
-      (zk--insert-link orig-id (zk--parse-id 'title orig-id))
+      (octavo--insert-link orig-id (octavo--parse-id 'title orig-id))
       (newline)))
   (insert "===\n\n"))
 
 ;;;###autoload
-(defun zk-rename-note ()
+(defun octavo-rename-note ()
   "Rename current note and replace title in header.
 When header title does not match file title, ask to accept header
 title as new title. If no, prompt for new title and replace
@@ -789,8 +794,8 @@ header title in buffer. If yes, file name changed to header
 title."
   (interactive)
   (read-only-mode -1)
-  (let* ((id (zk--file-id buffer-file-name))
-         (file-title (zk--parse-id 'title id))
+  (let* ((id (octavo--file-id buffer-file-name))
+         (file-title (octavo--parse-id 'title id))
          (header-title (progn
                          (save-excursion
                            (goto-char (point-min))
@@ -800,7 +805,7 @@ title."
                             (line-end-position)))))
          (new-title))
     (unless id
-      (user-error "Not a zk file"))
+      (user-error "Not an Octavo file"))
     (if (not (string= file-title header-title))
         (if (y-or-n-p (format "Change from \"%s\" to \"%s\"? " file-title header-title))
             (setq new-title header-title)
@@ -814,7 +819,7 @@ title."
       (re-search-forward " ")
       (delete-region (point) (line-end-position))
       (insert new-title))
-    (let ((new-file (zk--note-file-path id new-title)))
+    (let ((new-file (octavo--note-file-path id new-title)))
       (rename-file buffer-file-name new-file t)
       (set-visited-file-name new-file t t)
       (save-buffer))))
@@ -822,137 +827,137 @@ title."
 ;;; Find File
 
 ;;;###autoload
-(defun zk-find-file (&optional other-window)
-  "Find file in `zk-directory'.
+(defun octavo-find-file (&optional other-window)
+  "Find file in `octavo-directory'.
 If OTHER-WINDOW is non-nil (or command is executed with
 \\[universal-argument]), find file in other window."
   (interactive "p")
   (if other-window
       (find-file-other-window
-       (zk-select-file "Find file in other window: "))
+       (octavo-select-file "Find file in other window: "))
     (find-file
-       (zk-select-file "Find file: "))))
+       (octavo-select-file "Find file: "))))
 
 ;;;###autoload
-(defun zk-find-file-by-id (id)
+(defun octavo-find-file-by-id (id)
   "Find file associated with ID."
-  (find-file (zk--parse-id 'file-path id)))
+  (find-file (octavo--parse-id 'file-path id)))
 
 ;;;###autoload
-(defun zk-find-file-by-full-text-search (regexp)
+(defun octavo-find-file-by-full-text-search (regexp)
   "Find files containing REGEXP."
   (interactive
    (list (read-string "Search string: "
-                      nil 'zk-search-history)))
-  (let ((files (zk--grep-file-list regexp)))
+                      nil 'octavo-search-history)))
+  (let ((files (octavo--grep-file-list regexp)))
     (if files
-        (find-file (zk-select-file
+        (find-file (octavo-select-file
                     (format "Files containing \"%s\": " regexp) files))
       (user-error "No results for \"%s\"" regexp))))
 
 ;;;###autoload
-(defun zk-current-notes ()
+(defun octavo-current-notes ()
   "Select from list of currently open notes.
 Optionally call a custom function by setting the variable
-`zk-current-notes-function' to a function name."
+`octavo-current-notes-function' to a function name."
   (interactive)
-  (if zk-current-notes-function
-      (funcall zk-current-notes-function)
+  (if octavo-current-notes-function
+      (funcall octavo-current-notes-function)
     (find-file
-     (zk-select-file "Current Notes:" (zk--current-notes-list)))))
+     (octavo-select-file "Current Notes:" (octavo--current-notes-list)))))
 
 ;;; Follow Links
 
 ;;;###autoload
-(defun zk-follow-link-at-point (&optional id)
-  "Open note that corresponds with the zk ID at point."
+(defun octavo-follow-link-at-point (&optional id)
+  "Open note that corresponds with the Octavo ID at point."
   (interactive)
-  (let ((id (or (zk--id-at-point)
+  (let ((id (or (octavo--id-at-point)
                 id)))
     (if id
-        (find-file (zk--parse-id 'file-path id))
-      (error "No zk-link at point"))))
+        (find-file (octavo--parse-id 'file-path id))
+      (error "No octavo-link at point"))))
 
-(defun zk--links-in-note-list ()
-  "Return list of zk files that are linked from the current buffer."
-  (let* ((zk-alist (zk--alist))
-         (zk-ids (zk--id-list nil zk-alist))
+(defun octavo--links-in-note-list ()
+  "Return list of Octavo files that are linked from the current buffer."
+  (let* ((octavo-alist (octavo--alist))
+         (octavo-ids (octavo--id-list nil octavo-alist))
          id-list)
     (save-buffer)
     (save-excursion
       (goto-char (point-min))
-      (while (re-search-forward (zk-link-regexp) nil t)
-        (when (member (match-string-no-properties 1) zk-ids)
+      (while (re-search-forward (octavo-link-regexp) nil t)
+        (when (member (match-string-no-properties 1) octavo-ids)
           (push (match-string-no-properties 1) id-list))))
     (if id-list
         (mapcar (lambda (id)
-                  (zk--parse-id 'file-path id zk-alist))
+                  (octavo--parse-id 'file-path id octavo-alist))
                 (delete-dups id-list))
-      (error "No zk-links in note"))))
+      (error "No octavo-links in note"))))
 
 ;;;###autoload
-(defun zk-links-in-note ()
+(defun octavo-links-in-note ()
   "Select from list of notes linked to in the current note."
   (interactive)
-  (let* ((files (ignore-errors (zk--links-in-note-list))))
+  (let* ((files (ignore-errors (octavo--links-in-note-list))))
     (if files
-        (find-file (zk-select-file "Links: " files))
+        (find-file (octavo-select-file "Links: " files))
       (user-error "No links found"))))
 
 ;;; Insert Link
 
 ;;;###autoload
-(defun zk-insert-link (arg &optional title)
+(defun octavo-insert-link (arg &optional title)
   "Insert link to note, from ARG.
 By default, only a link is inserted. With prefix-argument, both
-link and title are inserted. See variable `zk-link-and-title'
+link and title are inserted. See variable `octavo-link-and-title'
 for additional configurations. Optional TITLE."
   (interactive
-   (list (list (zk-select-file "Insert link: "))))
-  (if (zk--id-at-point)
-      (user-error "Move point off zk-id before inserting")
+   (list (list (octavo-select-file "Insert link: "))))
+  (if (octavo--id-at-point)
+      (user-error "Move point off octavo-id before inserting")
     (let* ((pref current-prefix-arg))
       (cond
-       ((or (and (not pref) (eq 't zk-link-and-title))
-            (and pref (not zk-link-and-title)))
-        (zk--insert-link arg title))
-       ((and (not pref) (eq 'ask zk-link-and-title))
+       ((or (and (not pref) (eq 't octavo-link-and-title))
+            (and pref (not octavo-link-and-title)))
+        (octavo--insert-link arg title))
+       ((and (not pref) (eq 'ask octavo-link-and-title))
         (if (y-or-n-p "Include title? ")
-            (zk--insert-link arg title)
-          (zk--insert-link arg)))
+            (octavo--insert-link arg title)
+          (octavo--insert-link arg)))
        ((or t
-            (and pref (eq 't zk-link-and-title)))
-        (zk--insert-link arg))))))
+            (and pref (eq 't octavo-link-and-title)))
+        (octavo--insert-link arg))))))
 
-(defun zk--insert-link (id &optional title)
+(defun octavo--insert-link (id &optional title)
   "Insert link to note with ID and TITLE.
-If TITLE is non-nil, use `zk-link-and-title-format',
-otherwise `zk-link-format'."
-  (insert (zk--format (if title
-                          zk-link-and-title-format
-                        zk-link-format)
+If TITLE is non-nil, use `octavo-link-and-title-format',
+otherwise `octavo-link-format'."
+  (insert (octavo--format (if title
+                          octavo-link-and-title-format
+                        octavo-link-format)
                       id title))
-  (when zk-enable-link-buttons
-    (zk-make-link-buttons)))
+  (when octavo-enable-link-buttons
+    (octavo-make-link-buttons)))
 
 ;;; Completion at Point
 
-(defun zk--format-candidates (&optional files format)
+(defun octavo--format-candidates (&optional files format)
   "Return a list of FILES as formatted candidates, following FORMAT.
 
-See `zk--format' for details about FORMAT. If nil,
-`zk-completion-at-point-format' will be used by default.
+See `octavo--format' for details about FORMAT. If nil,
+`octavo-completion-at-point-format' will be used by default.
 
-FILES must be a list of filepaths. If nil, all files in `zk-directory'
+FILES must be a list of filepaths. If nil, all files in `octavo-directory'
 will be returned as formatted candidates."
   (let* ((format (or format
-                     zk-completion-at-point-format)))
+                     octavo-completion-at-point-format)))
     (if files
-        (zk--formatter files format)
-      (zk--formatter (zk--directory-files) format t))))
+        (octavo--formatter files format)
+      (octavo--formatter (octavo--directory-files) format t))))
 
-(defun zk-completion-at-point ()
-  "Completion-at-point function for zk-links.
+(defun octavo-completion-at-point ()
+  "Completion-at-point function for octavo-links.
 When added to `completion-at-point-functions', typing two
 brackets \"[[\" initiates completion."
   (let ((case-fold-search t)
@@ -967,115 +972,115 @@ brackets \"[[\" initiates completion."
               origin
               (completion-table-dynamic
                (lambda (_)
-                 (zk--format-candidates)))
+                 (octavo--format-candidates)))
               :exit-function
               (lambda (str _status)
                 (delete-char (- -2 (length str)))
                 (insert str)
-                (when zk-enable-link-buttons
-                  (zk-make-button-before-point))))))))
+                (when octavo-enable-link-buttons
+                  (octavo-make-button-before-point))))))))
 
 ;;; Copy Link and Title
 
 ;;;###autoload
-(defun zk-copy-link-and-title (arg)
+(defun octavo-copy-link-and-title (arg)
   "Copy link and title for id or file ARG."
-  (interactive (list (zk-select-file "Copy link: ")))
-  (let ((links (zk--formatted-string arg zk-link-and-title-format)))
+  (interactive (list (octavo-select-file "Copy link: ")))
+  (let ((links (octavo--formatted-string arg octavo-link-and-title-format)))
     (kill-new links)
     (message "Copied: %s" links)))
 
 ;;; List Backlinks
 
-(defun zk--backlinks-list (id)
+(defun octavo--backlinks-list (id)
   "Return list of notes that link to note with ID."
-  (zk--grep-file-list (zk-link-regexp id)))
+  (octavo--grep-file-list (octavo-link-regexp id)))
 
 ;;;###autoload
-(defun zk-backlinks ()
+(defun octavo-backlinks ()
   "Select from list of all notes that link to the current note."
   (interactive)
-  (let* ((id (zk--file-id buffer-file-name))
-         (files (zk--backlinks-list id)))
+  (let* ((id (octavo--file-id buffer-file-name))
+         (files (octavo--backlinks-list id)))
     (if files
-        (find-file (zk-select-file "Backlinks: " files))
+        (find-file (octavo-select-file "Backlinks: " files))
       (user-error "No backlinks found"))))
 
 ;;; Search
 
 ;;;###autoload
-(defun zk-search (string)
-  "Search for STRING using function set in `zk-search-function'.
-Defaults to `zk-grep.'"
+(defun octavo-search (string)
+  "Search for STRING using function set in `octavo-search-function'.
+Defaults to `octavo-grep.'"
   (interactive
    (list (read-string "Search: "
-                      nil 'zk-search-history)))
-  (funcall zk-search-function string))
+                      nil 'octavo-search-history)))
+  (funcall octavo-search-function string))
 
-(defun zk-grep (regexp)
+(defun octavo-grep (regexp)
   "Wrapper around `rgrep' to search for REGEXP in all notes.
 Opens search results in a grep buffer."
   (interactive
-   (list (read-string "zk-grep: "
-                      nil 'zk-search-history)))
+   (list (read-string "octavo-grep: "
+                      nil 'octavo-search-history)))
   (grep-compute-defaults)
-  (rgrep regexp (concat "*." zk-file-extension) zk-directory nil))
+  (rgrep regexp (concat "*." octavo-file-extension) octavo-directory nil))
 
 ;;; Tag Functions
 
 ;;;###autoload
-(defun zk-tag-search (tag)
+(defun octavo-tag-search (tag)
   "Open grep buffer containing results of search for TAG.
-Select TAG, with completion, from list of all tags in zk notes.
-Defaults to `zk-grep'."
-  (interactive (list (completing-read "Find tag: " (zk--grep-tag-list))))
-  (funcall zk-tag-search-function tag))
+Select TAG, with completion, from list of all tags in Octavo notes.
+Defaults to `octavo-grep'."
+  (interactive (list (completing-read "Find tag: " (octavo--grep-tag-list))))
+  (funcall octavo-tag-search-function tag))
 
 ;;;###autoload
-(defun zk-tag-insert (tag)
+(defun octavo-tag-insert (tag)
   "Insert TAG at point.
-Select TAG, with completion, from list of all tags in zk notes."
-  (interactive (list (completing-read "Insert tag: " (zk--grep-tag-list))))
-  (if (eq zk-tag-insert-function nil)
+Select TAG, with completion, from list of all tags in Octavo notes."
+  (interactive (list (completing-read "Insert tag: " (octavo--grep-tag-list))))
+  (if (eq octavo-tag-insert-function nil)
       (insert tag)
     (save-excursion
-      (funcall zk-tag-insert-function tag))))
+      (funcall octavo-tag-insert-function tag))))
 
 ;;; Find Dead Links and Unlinked Notes
-(defun zk--grep-link-id-list ()
-  "Return list of all ids that appear as links in `zk-directory' files."
+(defun octavo--grep-link-id-list ()
+  "Return list of all ids that appear as links in `octavo-directory' files."
   (mapcar (lambda (link)
-            (when (string-match zk-id-regexp link)
+            (when (string-match octavo-id-regexp link)
               (match-string 0 link)))
-          (zk--grep-match-list (zk-link-regexp) 'unique)))
+          (octavo--grep-match-list (octavo-link-regexp) 'unique)))
 
-(defun zk--dead-link-id-list ()
+(defun octavo--dead-link-id-list ()
   "Return list of all links with no corresponding note."
-  (let* ((all-link-ids (zk--grep-link-id-list))
-         (all-ids (zk--id-list)))
+  (let* ((all-link-ids (octavo--grep-link-id-list))
+         (all-ids (octavo--id-list)))
     (delete-dups (remq nil (mapcar
                             (lambda (x)
-                              (string-match zk-id-regexp x)
+                              (string-match octavo-id-regexp x)
                               (when (not (member (match-string-no-properties 0 x) all-ids))
                                 x))
                             all-link-ids)))))
 
 ;;;###autoload
-(defun zk-grep-dead-links ()
-  "Search for dead links using `zk-search-function'."
+(defun octavo-grep-dead-links ()
+  "Search for dead links using `octavo-search-function'."
   (interactive)
-  (let* ((dead-link-ids (zk--dead-link-id-list)))
+  (let* ((dead-link-ids (octavo--dead-link-id-list)))
     (if dead-link-ids
-        (funcall zk-search-function (mapconcat
+        (funcall octavo-search-function (mapconcat
                                      #'identity
                                      dead-link-ids
                                      "\\|"))
       (user-error "No dead links found"))))
 
-(defun zk--unlinked-notes-list ()
+(defun octavo--unlinked-notes-list ()
   "Return list of IDs for notes that no notes link to."
-  (let* ((all-link-ids (zk--grep-link-id-list))
-         (all-ids (zk--id-list)))
+  (let* ((all-link-ids (octavo--grep-link-id-list))
+         (all-ids (octavo--id-list)))
     (remq nil (mapcar
                (lambda (x)
                  (when (not (member x all-link-ids))
@@ -1083,26 +1088,26 @@ Select TAG, with completion, from list of all tags in zk notes."
                all-ids))))
 
 ;;;###autoload
-(defun zk-unlinked-notes ()
+(defun octavo-unlinked-notes ()
   "Find unlinked notes."
   (interactive)
-  (let* ((ids (zk--unlinked-notes-list))
-         (notes (mapcar (lambda (id) (zk--parse-id 'file-path id)) ids)))
+  (let* ((ids (octavo--unlinked-notes-list))
+         (notes (mapcar (lambda (id) (octavo--parse-id 'file-path id)) ids)))
     (if notes
-        (find-file (zk-select-file "Unlinked notes: " notes))
+        (find-file (octavo-select-file "Unlinked notes: " notes))
       (user-error "No unlinked notes found"))))
 
-;;; zk-network - Backlinks and Forward Links Together
+;;; octavo-network - Backlinks and Forward Links Together
 
-(defun zk-network ()
-  "Find `zk-backlinks' and `zk-links-in-note' for current or selected note.
+(defun octavo-network ()
+  "Find `octavo-backlinks' and `octavo-links-in-note' for current or selected note.
 Backlinks and Links-in-Note are grouped separately."
   (interactive)
-  (unless (zk-file-p)
-    (user-error "Not a zk file"))
-  (let* ((id (zk--file-id buffer-file-name))
-         (backlinks (ignore-errors (zk--backlinks-list id)))
-         (links-in-note (ignore-errors (zk--links-in-note-list)))
+  (unless (octavo-file-p)
+    (user-error "Not an Octavo file"))
+  (let* ((id (octavo--file-id buffer-file-name))
+         (backlinks (ignore-errors (octavo--backlinks-list id)))
+         (links-in-note (ignore-errors (octavo--links-in-note-list)))
          (resources))
     (if (or backlinks links-in-note)
         (progn
@@ -1111,27 +1116,27 @@ Backlinks and Links-in-Note are grouped separately."
             (push (propertize (abbreviate-file-name file) 'type 'link) resources))
           (dolist (file backlinks)
             (push (propertize file 'type 'backlink) resources))
-          (find-file (zk-select-file "Links: "
+          (find-file (octavo-select-file "Links: "
                                      resources
-                                     'zk--network-group-function
+                                     'octavo--network-group-function
                                      'identity)))
       (user-error "No links found"))))
 
-(defun zk--network-group-function (file transform)
+(defun octavo--network-group-function (file transform)
   "Group FILE by type and TRANSFORM."
-  (cond (transform (zk--file-title file))
+  (cond (transform (octavo--file-title file))
         ((eq 'backlink (get-text-property 0 'type file)) "Backlinks")
         ((eq 'link (get-text-property 0 'type file)) "Links-in-Note")
         (t
          (error "Unexpected condition"))))
 
-;; (defun zk--network-sort-function (list)
+;; (defun octavo--network-sort-function (list)
 ;;   "Sort LIST of links so Backlinks group is first."
 ;;   (sort list
 ;;         (lambda (a _b)
 ;;           (when (eq 'backlink (get-text-property 0 'type a))
 ;;               t))))
 
-(provide 'zk)
+(provide 'octavo)
 
-;;; zk.el ends here
+;;; octavo.el ends here
