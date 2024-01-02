@@ -1,5 +1,5 @@
-#+title: zk.el - A dead-simple, feature-rich Zettelkasten implementation for Emacs
-#+author: Grant Rosson
+#+title: Octavo -- Yet another Zettelkasten implementation for Emacs
+#+author: Richard Boyechko (based on Grant Rosson's excellent Zk)
 #+language: en
 
 [[https://melpa.org/#/zk][file:https://melpa.org/packages/zk-badge.svg]]
@@ -8,8 +8,8 @@
 - [[#setup][Setup]]
 - [[#features][Features]]
   - [[#follow-links][Follow Links]]
-    - [[#using-org-mode-and-zk-links][Using Org-Mode and zk-links]]
-    - [[using-org-links-with-zk-org-link.el][Using Org-links with zk-org-link.el]]
+    - [[#using-org-mode-and-zk-links][Using Org-Mode and octavo-links]]
+    - [[using-org-links-with-zk-org-link.el][Using Org-links with octavo-org-link.el]]
     - [[#link-hint.el][Support for link-hint.el]]
   - [[#list-backlinks][List Backlinks]]
   - [[#smart-new-note-creation][Smart New-Note Creation]]
@@ -18,14 +18,20 @@
     - [[#alternative-search-functions-using-consult-grep][Alternative Search Functions, using Consult-Grep]]
   - [[#embark-integration][Embark Integration]]
   - [[#list-current-notes][List Current Notes]]
-- [[#zk-index-and-zk-desktop][ZK-Index and ZK-Desktop]]
+- [[#zk-index-and-zk-desktop][Octavo-Index and Octavo-Desktop]]
   - [[#setup-1][Setup]]
-  - [[#zk-index][ZK-Index]]
-  - [[#zk-desktop][ZK-Desktop]]
-  - [[#embark-integration-for-zk-index-and-zk-desktop][Embark integration for ZK-Index and ZK-Desktop]]
+  - [[#zk-index][Octavo-Index]]
+  - [[#Zk-desktop][Octavo-Desktop]]
+  - [[#embark-integration-for-zk-index-and-zk-desktop][Embark integration for Octavo-Index and Octavo-Desktop]]
 - [[#comparable-zettelkasten-like-implementations][Comparable Zettelkasten(-like) Implementations]]
 
 * Introduction
+
+Octavo is a very close fork of Grant Rossom's Zk & co. It is intended as a kind
+of bleeding edge refactoring of the original code, with the result that things
+are much more in flux compared to the stability-oriented Zk. If you are looking
+for reliable framework in which to work, Zk would be a much better option that
+is less likely to require unforeseen debugging.
 
 This set of functions aims to implement many (but not all) of the features of
 the package [[https://github.com/EFLS/zetteldeft/][Zetteldeft]], while circumventing and eliminating any dependency on
@@ -43,7 +49,7 @@ Out of the box, links are clickable buttons made with the built-in
 =button.el=. This means that links will work the same way in (almost) any
 major mode: fundamental-mode, text-mode, outline-mode, markdown-mode, etc.
 The key exception is Org-Mode, where a minor change is necessary to enable
-clickable zk-links. (See below for details.)
+clickable octavo-links. (See below for details.)
 
 The structural simplicity of this set of functions is---one hopes, at
 least---in line with the structural simplicity of the so-called "Zettelkasten
@@ -55,17 +61,17 @@ Fork away, and make it your own.
 Video demonstrations:
 - [[https://www.youtube.com/watch?v=BixlUK4QTNk][zk - Setup and Main Features]]
 - [[https://www.youtube.com/watch?v=oEgdJlojlU8][zk - Getting Started - Hydra and Inbox Note]]
-- [[https://www.youtube.com/watch?v=7qNT87dphiA][zk-index and zk-desktop]]
-- [[https://www.youtube.com/watch?v=O6iSV4pQQ5g][zk-luhmann]]
+- [[https://www.youtube.com/watch?v=7qNT87dphiA][octavo-index and octavo-desktop]]
+- [[https://www.youtube.com/watch?v=O6iSV4pQQ5g][octavo-luhmann]]
 
 ** File Structure
 
-Notes are all kept in a single directory, set to the variable =zk-directory=,
+Notes are all kept in a single directory, set to the variable =octavo-directory=,
 with no subdirectories.
 
 Each note is a separate file, named as follows: a unique ID number followed
 by the title of the note followed by the file extension (set in the variable
-=zk-file-extension=), e.g. "202012091130 On the origin of species.txt".
+=octavo-file-extension=), e.g. "202012091130 On the origin of species.txt".
 
 ** IDs and Links
 
@@ -95,22 +101,22 @@ The easiest way to install is from [[https://melpa.org/#/zk][MELPA]].
 Or, manually add =zk.el= to your loadpath and include =(require 'zk)= in your
 init.el file.
 
-At a minimum, you must set the variables =zk-directory= and
-=zk-file-extension=:
+At a minimum, you must set the variables =octavo-directory= and
+=octavo-file-extension=:
 
 #+begin_src emacs-lisp
-(setq zk-directory "~/path/to/your/zk-directory")
-(setq zk-file-extension "md") ;; any plaintext file extension, eg, "org" or "txt"
+(setq octavo-directory "~/path/to/your/octavo-directory")
+(setq octavo-file-extension "md") ;; any plaintext file extension, eg, "org" or "txt"
 #+end_src
 
-Once =zk= is loaded, call =M-x zk-new-note= to create a note or =M-x zk-find-file= to
+Once =zk= is loaded, call =M-x octavo-new-note= to create a note or =M-x octavo-find-file= to
 open an existing note.
 
 *** Additional Setup:
 
-- To enable automatic link-creation when opening a zk-file, include the function =(zk-setup-auto-link-buttons)= in your init config. This ensures that =zk-enable-link-buttons= is set to =t= and adds =zk-make-link-buttons= to Emacs's =find-file-hook=.
+- To enable automatic link-creation when opening a octavo-file, include the function =(octavo-setup-auto-link-buttons)= in your init config. This ensures that =octavo-enable-link-buttons= is set to =t= and adds =octavo-make-link-buttons= to Emacs's =find-file-hook=.
 
-- To enable Embark integration, include the function =(zk-setup-embark)= in your init config.
+- To enable Embark integration, include the function =(octavo-setup-embark)= in your init config.
 
 
 *** Sample setup with =use-package=
@@ -118,29 +124,29 @@ open an existing note.
 #+begin_src emacs-lisp
 (use-package zk
   :custom
-  (zk-directory "~/path/to/zk-directory")
-  (zk-file-extension "md")
+  (octavo-directory "~/path/to/octavo-directory")
+  (octavo-file-extension "md")
   :config
-  (zk-setup-auto-link-buttons)
-  (zk-setup-embark))
+  (octavo-setup-auto-link-buttons)
+  (octavo-setup-embark))
 #+end_src
 
-*** Sample setup with =straight.el= to include optional =zk-consult.el= functions
+*** Sample setup with =straight.el= to include optional =octavo-consult.el= functions
 
 See [[#alternative-search-functions-using-consult-grep][Alternative Search Functions, using Consult-Grep]]
 
 #+begin_src emacs-lisp
 (use-package zk
-  :straight (zk :files (:defaults "zk-consult.el"))
+  :straight (zk :files (:defaults "octavo-consult.el"))
   :custom
-  (zk-directory "~/path/to/zk-directory")
-  (zk-file-extension "md")
+  (octavo-directory "~/path/to/octavo-directory")
+  (octavo-file-extension "md")
   :config
-  (require 'zk-consult)
-  (zk-setup-auto-link-buttons)
-  (zk-setup-embark)
-  (setq zk-tag-grep-function #'zk-consult-grep-tag-search
-        zk-grep-function #'zk-consult-grep))
+  (require 'octavo-consult)
+  (octavo-setup-auto-link-buttons)
+  (octavo-setup-embark)
+  (setq octavo-tag-grep-function #'octavo-consult-grep-tag-search
+        octavo-grep-function #'octavo-consult-grep))
 #+end_src
 
 * Features
@@ -150,56 +156,56 @@ See [[#alternative-search-functions-using-consult-grep][Alternative Search Funct
 Links are buttons made with the built-in package =button.el=: they are
 clickable text that work the same way in any major mode. Whether in
 fundamental-mode, text-mode, outline-mode, or markdown-mode, etc.,
-clicking or pressing =RET= on a zk-link opens the corresponding note. The
+clicking or pressing =RET= on a octavo-link opens the corresponding note. The
 only exception is Org-Mode. (See below.) configuring clickable links in
 Org-Mode, see below.)
 
-It is also possible to call the command =zk-follow-link-at-point=
-when a link is at point, or call the command =zk-links-in-note= to be
+It is also possible to call the command =octavo-follow-link-at-point=
+when a link is at point, or call the command =octavo-links-in-note= to be
 presented with a =completing-read= list of all links in the current note.
 
-*** Using Org-Mode and zk-links
+*** Using Org-Mode and octavo-links
 
-In Org-Mode, links in the default format =zk-link-format= (an ID in
+In Org-Mode, links in the default format =octavo-link-format= (an ID in
 double-brackets) will be treated as internal links. This means that when they
 are clicked, Org will, by default, look for an in-buffer heading or target
-that is named, or contains, the given ID. To make Org treat zk-links /as/
-zk-links and open the corresponding note, it is only necessary to advise the
+that is named, or contains, the given ID. To make Org treat octavo-links /as/
+octavo-links and open the corresponding note, it is only necessary to advise the
 function =org-open-at-point= as follows:
 
 #+begin_src emacs-lisp
-(defun zk-org-try-to-follow-link (fn &optional arg)
-  "When 'org-open-at-point' FN fails, try 'zk-follow-link-at-point'.
+(defun octavo-org-try-to-follow-link (fn &optional arg)
+  "When 'org-open-at-point' FN fails, try 'octavo-follow-link-at-point'.
 Optional ARG."
   (let ((org-link-search-must-match-exact-headline t))
     (condition-case nil
 	(apply fn arg)
-      (error (zk-follow-link-at-point)))))
+      (error (octavo-follow-link-at-point)))))
 
-(advice-add 'org-open-at-point :around #'zk-org-try-to-follow-link)
+(advice-add 'org-open-at-point :around #'octavo-org-try-to-follow-link)
 #+end_src
 
 Briefly, this function instructs =org-open-at-point= to try calling
-=zk-follow-link-at-point= when a link is not an internal link.
+=octavo-follow-link-at-point= when a link is not an internal link.
 
 An alternative solution for using Org-Mode would be to change
-=zk-link-format= to use, for example, single brackets instead of double
+=octavo-link-format= to use, for example, single brackets instead of double
 brackets. With this change, the default link buttons will work as expected.
 
 Note that using Org links makes the creation of link buttons, via
-=zk-make-link-buttons=, redundant. This link button aspects of the package
-can be disabled by setting =zk-enable-link-buttons= to nil.
+=octavo-make-link-buttons=, redundant. This link button aspects of the package
+can be disabled by setting =octavo-enable-link-buttons= to nil.
 
-*** Using Org-links with zk-org-link.el
+*** Using Org-links with octavo-org-link.el
 
-The companion package =zk-org-link.el= provides a custom Org-link type called
+The companion package =octavo-org-link.el= provides a custom Org-link type called
 =zk=, such that links will be styled =[[zk:201812101245]]= instead of
 =[[201812101245]]=. Using Org-links allows notes to be followed as expected,
 as well as exported to various formats via =org-export=, stored via
 =org-store-link=, and completed via =org-insert-link=.
 
 The link styles cannot be combined --- they are not mutually compatible. Use
-one style or the other. That is, either use =zk-org-link.el= or don't. (I do
+one style or the other. That is, either use =octavo-org-link.el= or don't. (I do
 not, but here it is anyway.)
 
 To use org-links, include the following in your init.el:
@@ -207,64 +213,64 @@ To use org-links, include the following in your init.el:
  #+begin_src emacs-lisp
  (with-eval-after-load 'org
    (with-eval-after-load 'zk
-     (require 'zk-org-link)))
+     (require 'octavo-org-link)))
  #+end_src
 
 This will set create the =zk= Org-link type and set necessary values for
-several variables. Be sure to load =zk-org-link.el= /after/ zk, as the above
+several variables. Be sure to load =octavo-org-link.el= /after/ zk, as the above
 code snippet does.
 
-NOTE: =zk-completion-at-point= functionality is not available when using
-=zk-org-link.el=.
+NOTE: =octavo-completion-at-point= functionality is not available when using
+=octavo-org-link.el=.
 
 *** link-hint.el
 
-To allow link-hint.el to find zk-links, it is necessary to add a new
+To allow link-hint.el to find octavo-links, it is necessary to add a new
 link type, as follows:
 
 #+begin_src emacs-lisp
-(defun zk-link-hint--zk-link-at-point-p ()
-  "Return the id of the zk-link at point or nil."
-  (thing-at-point-looking-at (zk-link-regexp)))
+(defun octavo-link-hint--octavo-link-at-point-p ()
+  "Return the id of the octavo-link at point or nil."
+  (thing-at-point-looking-at (octavo-link-regexp)))
 
-(defun zk-link-hint--next-zk-link (&optional bound)
-  "Find the next zk-link.
+(defun octavo-link-hint--next-octavo-link (&optional bound)
+  "Find the next octavo-link.
 Only search the range between just after the point and BOUND."
-  (link-hint--next-regexp zk-id-regexp bound))
+  (link-hint--next-regexp octavo-id-regexp bound))
 
 (eval-when-compile
-  (link-hint-define-type 'zk-link
-    :next #'zk-link-hint--next-zk-link
-    :at-point-p #'zk-link-hint--zk-link-at-point-p
-    :open #'zk-follow-link-at-point
+  (link-hint-define-type 'octavo-link
+    :next #'octavo-link-hint--next-octavo-link
+    :at-point-p #'octavo-link-hint--octavo-link-at-point-p
+    :open #'octavo-follow-link-at-point
     :copy #'kill-new))
 
-(push 'link-hint-zk-link link-hint-types)
+(push 'link-hint-octavo-link link-hint-types)
   #+end_src
 
 ** List Backlinks
 
-Calling =zk-backlinks= in any note presents a list, with completion, of all
+Calling =octavo-backlinks= in any note presents a list, with completion, of all
 notes that contain at least one link to the current note.
 
 ** Smart New-Note Creation
 
-The function =zk-new-note= prompts for a title and generates a unique ID
+The function =octavo-new-note= prompts for a title and generates a unique ID
 number for the new note based on the current date and time. A new file with
-that ID and title will be created in the =zk-directory=.
+that ID and title will be created in the =octavo-directory=.
 
 *** New-Note Header and Backlink
 
 The header of the new note is inserted by means of a function, the name of
-which must be set to the variable =zk-new-note-header-function=.
+which must be set to the variable =octavo-new-note-header-function=.
 
-The default header function, =zk-new-note-header=, behaves differently
-depending on the context in which =zk-new-note= is initiated. If
-=zk-new-note= is called within an existing note, from within the
-=zk-directory=, the new note's header will contain a backlink to that note.
-If =zk-new-note= is called from outside of the =zk-directory=, there are two
+The default header function, =octavo-new-note-header=, behaves differently
+depending on the context in which =octavo-new-note= is initiated. If
+=octavo-new-note= is called within an existing note, from within the
+=octavo-directory=, the new note's header will contain a backlink to that note.
+If =octavo-new-note= is called from outside of the =octavo-directory=, there are two
 possible behaviors, depending on the setting of the variable
-=zk-default-backlink=. If this variable is set to nil, the header of the new
+=octavo-default-backlink=. If this variable is set to nil, the header of the new
 note will contain no backlink. If this variable is set to an ID (as a
 string), the header will contain a link and title corresponding with that ID.
 This can be useful if the directory contains a something like a "home" note
@@ -273,19 +279,19 @@ or an "inbox" note.
 *** Insert New-Note Link at Point of Creation
 
 By default, a link to the new note, along with the new note's title, will be
-placed at point wherever =zk-new-note= was called. This behavior can be
-configured with the variable =zk-new-note-link-insert=: when set to =t=, a
+placed at point wherever =octavo-new-note= was called. This behavior can be
+configured with the variable =octavo-new-note-link-insert=: when set to =t=, a
 link is always inserted; when set to =zk=, a link is inserted only when
-=zk-new-note= is initiated inside an existing note in =zk-directory=; when
+=octavo-new-note= is initiated inside an existing note in =octavo-directory=; when
 set to =ask=, the user is asked whether or not a link should be inserted;
-when set to =nil=, a link is not inserted. Calling =zk-new-note= with a
+when set to =nil=, a link is not inserted. Calling =octavo-new-note= with a
 prefix-argument will insert a link regardless of setting of
-=zk-new-note-link-insert=.
+=octavo-new-note-link-insert=.
 
 *** ID Format
 
 By default, the date/time of a generated ID only goes to the minute, though
-this can be configured with the variable =zk-id-time-string-format=. In the
+this can be configured with the variable =octavo-id-time-string-format=. In the
 default case, however, if more than one note is created in the same minute,
 the ID will be incremented by 1 until it is unique, allowing for rapid note
 creation.
@@ -296,7 +302,7 @@ Finally, a new note can be created from a selected region of text. The
 convention for this feature is that the first line of the region will be used
 as the new note's title, while the subsequent lines will be used as the body,
 with the exception of a single separator line between title and body. To
-clarify, consider the following as the region selected swhen =zk-new-note= is
+clarify, consider the following as the region selected swhen =octavo-new-note= is
 called:
 
 #+begin_src emacs-lisp
@@ -320,34 +326,34 @@ title. For now, though, custom prevails.
 
 *** Insert Links via Function
 
-Calling =zk-insert-link= presents a list, with completion, of all notes in
-the =zk-directory=. By default this function inserts only the link itself,
+Calling =octavo-insert-link= presents a list, with completion, of all notes in
+the =octavo-directory=. By default this function inserts only the link itself,
 like so: =[[202012091130]]=.
 
 To insert both a link and title, either use a prefix-argument before calling
-=zk-insert-link= or set the variable =zk-link-insert-title= to =t=, to always
-insert link and title together. Note that when =zk-link-insert-title= is set
-to =t=, calling =zk-insert-link= with a prefix-argument temporarily restores
+=octavo-insert-link= or set the variable =octavo-link-insert-title= to =t=, to always
+insert link and title together. Note that when =octavo-link-insert-title= is set
+to =t=, calling =octavo-insert-link= with a prefix-argument temporarily restores
 the default behavior and inserts the link without a title.
 
 To be prompted with a yes-or-no query, asking whether to insert a title with
-the link or insert only a link by itself, set =zk-link-insert-title= to
+the link or insert only a link by itself, set =octavo-link-insert-title= to
 =ask=. With this setting, a prefix-argument also restores the default
 behavior of inserting only a link.
 
 The format in which link and title are inserted can be configured with the
-variable =zk-link-and-title-format=.
+variable =octavo-link-and-title-format=.
 
 *** Completion-at-Point
 
 This package includes a completion-at-point-function,
-=zk-completion-at-point=, for inserting links. Completion candidates are
+=octavo-completion-at-point=, for inserting links. Completion candidates are
 formatted as links followed by a title, i.e., =[[202012091130]] On the origin
 of species=, such that typing =[[= will initiate completion. To enable this
-functionality, add =zk-completion-at-point= function to
+functionality, add =octavo-completion-at-point= function to
 =completion-at-point-functions=, by evaluating the following:
 
-=(add-hook 'completion-at-point-functions #'zk-completion-at-point 'append)=
+=(add-hook 'completion-at-point-functions #'octavo-completion-at-point 'append)=
 
 Consider using [[https://github.com/minad/corfu][Corfu]] or [[https://github.com/company-mode/company-mode][Company]] as a convenient interface for such
 completions.
@@ -356,33 +362,33 @@ completions.
 
 *** Note Search
 
-The default search behavior of =zk-search= calls the built-in function
-=lgrep= to search for a regexp in all files in =zk-directory=. Results are
+The default search behavior of =octavo-search= calls the built-in function
+=lgrep= to search for a regexp in all files in =octavo-directory=. Results are
 presented in a =grep= buffer.
 
-The function =zk-find-file-by-full-text-search= presents, via
+The function =octavo-find-file-by-full-text-search= presents, via
 =completing-read=, a list of all files containing at least a single instance
 of a give search string somewhere in the body of the note. Compare this to
-=zk-file-file= which returns matches only from the filename.
+=octavo-file-file= which returns matches only from the filename.
 
 *** Tag Search (and Insert)
 
-There are two functions that query all notes in the =zk-directory= for tags
-in following form: =#tag=. One of the functions, =zk-tag-search=, opens a
+There are two functions that query all notes in the =octavo-directory= for tags
+in following form: =#tag=. One of the functions, =octavo-tag-search=, opens a
 grep buffer listing all notes that contain the selected tag. The other
-function, =zk-tag-insert=, inserts the selected tag into the current buffer.
+function, =octavo-tag-insert=, inserts the selected tag into the current buffer.
 
-*** Alternative Search Functions, using Consult-Grep 
+*** Alternative Search Functions, using Consult-Grep
 
-The file =zk-consult.el= includes two alternative functions, for use with the
+The file =octavo-consult.el= includes two alternative functions, for use with the
 [[https://github.com/minad/consult][Consult]] package, that display the results using =completing-read=.
 
-To use, make sure =Consult= is loaded, then load =zk-consult.el=, and set
+To use, make sure =Consult= is loaded, then load =octavo-consult.el=, and set
 the following variables accordingly:
 
 #+begin_src emacs-lisp
-(setq zk-grep-function 'zk-consult-grep)
-(setq zk-tag-grep-function 'zk-consult-grep-tag-search)
+(setq octavo-grep-function 'octavo-consult-grep)
+(setq octavo-tag-grep-function 'octavo-consult-grep-tag-search)
 #+end_src
 
 ** Embark Integration
@@ -390,91 +396,91 @@ the following variables accordingly:
 This package includes support for [[https://github.com/oantolin/embark][Embark]], both on links-at-point and in the
 minibuffer.
 
-To enable Embark integration, evaluate the function =zk-setup-embark=. Include this
+To enable Embark integration, evaluate the function =octavo-setup-embark=. Include this
 function in your config file to setup Embark integration on startup.
 
-When Embark is loaded, calling =embark-act= on a zk-id at point makes
-available the functions in the keymap =zk-id-map=. This is a convenient way
+When Embark is loaded, calling =embark-act= on a octavo-id at point makes
+available the functions in the keymap =octavo-id-map=. This is a convenient way
 to follow links or to search for instances of the ID in all notes using
-=zk-search=.
+=octavo-search=.
 
 Calling =embark-act= in the minibuffer makes available the functions in
-=zk-file-map=. This is a convenient way to open notes or insert links.
+=octavo-file-map=. This is a convenient way to open notes or insert links.
 
-Additionally, note that because the function =zk-current-notes= uses
+Additionally, note that because the function =octavo-current-notes= uses
 =read-buffer= by default, all Embark buffer actions are automatically
 available through =embark-act=. This makes killing open notes a snap!
 
-Last note: adding =zk-search= to other Embark keymaps is a convenient way to
+Last note: adding =octavo-search= to other Embark keymaps is a convenient way to
 search all notes for a given Embark target. Consider adding it to the
 =embark-region-map=, for example, with a memorable keybinding --- like "z"!
 
 ** List Current Notes
 
-The function =zk-current-notes= presents a list of all currently open notes.
+The function =octavo-current-notes= presents a list of all currently open notes.
 Selecting a note opens it in the current frame.
 
 The command can be set to use custom function, however, by setting the
-variable =zk-current-note-function= to the name of a function.
+variable =octavo-current-note-function= to the name of a function.
 
-One such function is available in =zk-consult.el=: =zk-consult-current-notes=
+One such function is available in =octavo-consult.el=: =octavo-consult-current-notes=
 presents the list of current notes as a narrowed =consult-buffer-source=.
 Note that this source can also be included in the primary =consult-buffer=
-interface by adding =zk-consult-source= to list =consult-buffer-sources=.
+interface by adding =octavo-consult-source= to list =consult-buffer-sources=.
 (This is *not* done by default.)
 
-* ZK-Index and ZK-Desktop
+* Octavo-Index and Octavo-Desktop
 
-The package =zk-index.el= is a companion to =zk= that offers two buffer-based
-interfaces for working with notes in your zk-directory.
+The package =octavo-index.el= is a companion to =zk= that offers two buffer-based
+interfaces for working with notes in your octavo-directory.
 
 For a video demonstration, see: https://youtu.be/7qNT87dphiA
 
-** ZK-Index
+** Octavo-Index
 
-This package is available on [[https://melpa.org/#/zk-index][MELPA]]. 
+This package is available on [[https://melpa.org/#/zk-index][MELPA]].
 
 Sample setup with =use-package=:
 
 #+begin_src emacs-lisp
-(use-package zk-index
+(use-package octavo-index
   :after zk
   :config
-  (zk-index-setup-embark))
+  (octavo-index-setup-embark))
 #+end_src
 
-The function =zk-index= pops up a buffer listing of all note titles, each of
+The function =octavo-index= pops up a buffer listing of all note titles, each of
 which is a clickable button. Clicking a title will pop the note into the above
 window.
 
-The ZK-Index buffer is in a major mode with a dedicated keymap:
+The Octavo-Index buffer is in a major mode with a dedicated keymap:
 
 #+begin_src emacs-lisp
-(defvar zk-index-mode-map
+(defvar octavo-index-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "n") #'zk-index-next-line)
-    (define-key map (kbd "p") #'zk-index-previous-line)
-    (define-key map (kbd "v") #'zk-index-view-note)
+    (define-key map (kbd "n") #'octavo-index-next-line)
+    (define-key map (kbd "p") #'octavo-index-previous-line)
+    (define-key map (kbd "v") #'octavo-index-view-note)
     (define-key map (kbd "o") #'other-window)
-    (define-key map (kbd "f") #'zk-index-focus)
-    (define-key map (kbd "s") #'zk-index-search)
-    (define-key map (kbd "g") #'zk-index-query-refresh)
-    (define-key map (kbd "c") #'zk-index-current-notes)
-    (define-key map (kbd "i") #'zk-index-refresh)
-    (define-key map (kbd "S") #'zk-index-sort-size)
-    (define-key map (kbd "M") #'zk-index-sort-modified)
-    (define-key map (kbd "C") #'zk-index-sort-created)
-    (define-key map (kbd "RET") #'zk-index-open-note)
+    (define-key map (kbd "f") #'octavo-index-focus)
+    (define-key map (kbd "s") #'octavo-index-search)
+    (define-key map (kbd "g") #'octavo-index-query-refresh)
+    (define-key map (kbd "c") #'octavo-index-current-notes)
+    (define-key map (kbd "i") #'octavo-index-refresh)
+    (define-key map (kbd "S") #'octavo-index-sort-size)
+    (define-key map (kbd "M") #'octavo-index-sort-modified)
+    (define-key map (kbd "C") #'octavo-index-sort-created)
+    (define-key map (kbd "RET") #'octavo-index-open-note)
     (define-key map (kbd "q") #'delete-window)
     (make-composed-keymap map tabulated-list-mode-map))
-  "Keymap for ZK-Index buffer.")
+  "Keymap for Octavo-Index buffer.")
 #+end_src
 
 *** Navigation
 
 The keys =n= and =p= move the point to the next/previous index item,
 previewing the note at point in the above window. (This previewing behavior
-can be disabled by setting =zk-index-auto-scroll= to nil.) In contrast, using
+can be disabled by setting =octavo-index-auto-scroll= to nil.) In contrast, using
 =C-n= and =C-p= will move the point up and down the list without previewing
 notes.
 
@@ -510,7 +516,7 @@ all notes to the list.
 
 By default the index is sorted by time of last modification, with most
 recently modified notes being sorted to the top of the index. The key =M=
-(for 'modified') enacts this sorting method. 
+(for 'modified') enacts this sorting method.
 
 The key =C= (for 'created') sorts the index by time of creation, with the
 most recently created notes sorted to the top.
@@ -518,93 +524,94 @@ most recently created notes sorted to the top.
 The key =S= (for 'size') sorts the index by size of note, with largest notes
 sorted to the top.
 
-** ZK-Desktop
+** Octavo-Desktop
 
-The feature =zk-desktop= allows users to select and organize groups of notes
+The feature =octavo-desktop= allows users to select and organize groups of notes
 relevant to specific projects. The only necessary setup is setting a
 directory for saved desktops. A convenient and unobtrusive option is to
-simply use the =zk-directory= itself:
+simply use the =octavo-directory= itself:
 
 #+begin_src emacs-lisp
-(use-package zk-desktop
-  :after zk-index
+(use-package octavo-desktop
+  :after octavo-index
   :config
-  (zk-desktop-setup-embark)
+  (octavo-desktop-setup-embark)
   :custom
-  (zk-desktop-directory "path/to/zk-directory"))
+  (octavo-desktop-directory "path/to/octavo-directory"))
 #+end_src
 
-Think of =zk-desktop= as allowing you to achieve something like pulling
+Think of =octavo-desktop= as allowing you to achieve something like pulling
 project-specific note cards from a physical file cabinet and laying them out
 on a desktop in front of you, to be grouped and rearranged any way you like.
 In this case, however, the "desktop" is a simple plaintext file saved in the
-=zk-directory= and the "note cards" are just note titles, each a clickable
-button, just like in =zk-index=.
+=octavo-directory= and the "note cards" are just note titles, each a clickable
+button, just like in =octavo-index=.
 
-In contrast to =zk-index=, all notes on a given desktop are selected and
+In contrast to =octavo-index=, all notes on a given desktop are selected and
 placed there individually by the user, note-by-note, rather than en masse and
 programmatically. Additionally, the notes placed on the desktop can be
 rearranged, grouped, and commented on in-line.
 
 It is possible to have several desktops at once, each an individual file, and
 each corresponding to a different project. Use the function
-=zk-desktop-select= to switch from working with one desktop to working
+=octavo-desktop-select= to switch from working with one desktop to working
 with another.
 
 *** Working with notes on a desktop
 
-The notes listed on in the zk-desktop buffer can be rearranged, a single note
+The notes listed on in the octavo-desktop buffer can be rearranged, a single note
 can appear more than once, and the user can type on the desktop just like in
 a normal buffer --- for example, to create headings or simply to type notes.
 
-A zk-desktop buffers open in =fundamental-mode= by default, but this can be
-changed by setting the variable =zk-desktop-major-mode= to the symbol
+A octavo-desktop buffers open in =fundamental-mode= by default, but this can be
+changed by setting the variable =octavo-desktop-major-mode= to the symbol
 for a major mode. Consider setting this to =text-mode=, =outline-mode=, or
 =org-mode=.
 
 #+begin_src emacs-lisp
-(setq zk-desktop-major-mode 'outline-mode)
+(setq octavo-desktop-major-mode 'outline-mode)
 #+end_src
 
 *** Adding notes to a desktop
 
 Each method of adding notes to the currently active desktop is accomplished
-via the same function: =zk-desktop-send-to-desktop=.
+via the same function: =octavo-desktop-send-to-desktop=.
 
-When this function is called in the =zk-index= buffer itself, the note at
+When this function is called in the =octavo-index= buffer itself, the note at
 point is sent to the desktop. If several notes are selected in the index, all
 notes in the active region are sent to the current deskop. This selection
-feature is usefully combined with the focus/search feature of =zk-index=, to
+feature is usefully combined with the focus/search feature of =octavo-index=, to
 allow for sending a lot of relevant notes to a desktop at once.
 
-** Embark Integration for ZK-Index and ZK-Desktop
+** Embark Integration for Octavo-Index and Octavo-Desktop
 
-To enable integration with Embark, include =(zk-index-setup-embark)= and =(zk-desktop-setup-embark)= in your init config.
+To enable integration with Embark, include =(octavo-index-setup-embark)= and =(octavo-desktop-setup-embark)= in your init config.
 
-This setup allows all index and desktop items to be recognized as zk-id
-Embark targets, making available all Embark actions in the =zk-id-map=.
+This setup allows all index and desktop items to be recognized as octavo-id
+Embark targets, making available all Embark actions in the =octavo-id-map=.
 
-The latter adds =zk-desktop-send-to-deskop= to =zk-id-map= and =zk-file-map=, to
+The latter adds =octavo-desktop-send-to-deskop= to =octavo-id-map= and =octavo-file-map=, to
 facilitate sending files to desktop from the minibuffer or via =embark-act=
-in the zk-index buffer.
+in the octavo-index buffer.
 
 *** Embark-Select and Embark-Export
 
-Use =embark-select= to mark candidates, including zk-links, items in
-zk-index, and zk-files in the minibuffer. These selected items can then be
-acted on via =embark-act-all=. For example, =zk-copy-link-and-title= will add
+Use =embark-select= to mark candidates, including octavo-links, items in
+octavo-index, and octavo-files in the minibuffer. These selected items can then be
+acted on via =embark-act-all=. For example, =octavo-copy-link-and-title= will add
 to the kill-ring a nicely formatted list of links to the selected notes.
-Similarly, =zk-insert-link= will insert a nicely formatted list of links into
+Similarly, =octavo-insert-link= will insert a nicely formatted list of links into
 the appropriate buffer.
 
-When =zk-index= is loaded, calling =embark-export= on selected zk-files in
-the minibuffer or items in a zk-index export those items to a *new* ZK-Index
-buffer. Calling =zk-index-narrow= on selected items will narrow the primary
-ZK-Index buffer to those files.
+When =octavo-index= is loaded, calling =embark-export= on selected octavo-files in
+the minibuffer or items in a octavo-index export those items to a *new* Octavo-Index
+buffer. Calling =octavo-index-narrow= on selected items will narrow the primary
+Octavo-Index buffer to those files.
 
-* Comparable Zettelkasten(-like) Implementations 
+* Comparable Zettelkasten(-like) Implementations
 
 - _Emacs-based_
+  - [[https://github.com/localauthor/zk][Zk]]
   - [[https://github.com/EFLS/zetteldeft][Zetteldeft]]
   - [[https://github.com/org-roam/org-roam][Org-Roam]]
   - [[https://git.sr.ht/~protesilaos/denote][Denote]]
