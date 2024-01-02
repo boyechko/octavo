@@ -68,14 +68,6 @@
 (require 'format-spec)
 (require 'seq)
 
-;;; Variable Declarations
-
-(defvar embark-keymap-alist)
-(defvar embark-target-finders)
-(defvar embark-multitarget-actions)
-(defvar embark-general-map)
-(defvar embark-file-map)
-
 ;;; Variables
 
 (defgroup octavo nil
@@ -269,45 +261,6 @@ See `octavo-new-note' for details."
 
 (defvar octavo-file-history nil)
 (defvar octavo-search-history nil)
-
-;;; Embark Integration
-
-(defvar octavo-id-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'octavo-follow-link-at-point)
-    (define-key map (kbd "k") #'octavo-copy-link-and-title)
-    (define-key map (kbd "s") #'octavo-search)
-    map)
-  "Keymap for Embark octavo-id at-point actions.")
-
-(defvar octavo-file-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "i") #'octavo-insert-link)
-    (define-key map (kbd "f") #'octavo-find-file)
-    (define-key map (kbd "k") #'octavo-copy-link-and-title)
-    map)
-  "Keymap for Embark octavo-file minibuffer actions.")
-
-;;;###autoload
-(defun octavo-embark-target-octavo-id-at-point ()
-  "Target octavo-id at point."
-  (when (thing-at-point-looking-at octavo-id-regexp)
-    (let ((octavo-id (match-string-no-properties 0)))
-      `(octavo-id ,octavo-id . ,(bounds-of-thing-at-point 'symbol)))))
-
-;;;###autoload
-(defun octavo-setup-embark ()
-  "Setup Embark integration for Octavo.
-Adds octavo-id as an Embark target, and adds `octavo-id-map' and
-`octavo-file-map' to `embark-keymap-alist'."
-  (with-eval-after-load 'embark
-    (add-to-list 'embark-multitarget-actions 'octavo-copy-link-and-title)
-    (add-to-list 'embark-multitarget-actions 'octavo-insert-link)
-    (add-to-list 'embark-target-finders 'octavo-embark-target-octavo-id-at-point)
-    (add-to-list 'embark-keymap-alist '(octavo-id . octavo-id-map))
-    (add-to-list 'embark-keymap-alist '(octavo-file . octavo-file-map))
-    (set-keymap-parent octavo-id-map embark-general-map)
-    (set-keymap-parent octavo-file-map embark-file-map)))
 
 ;;; Low-Level Functions
 
@@ -979,16 +932,6 @@ brackets \"[[\" initiates completion."
                 (insert str)
                 (when octavo-enable-link-buttons
                   (octavo-make-button-before-point))))))))
-
-;;; Copy Link and Title
-
-;;;###autoload
-(defun octavo-copy-link-and-title (arg)
-  "Copy link and title for id or file ARG."
-  (interactive (list (octavo-select-file "Copy link: ")))
-  (let ((links (octavo--formatted-string arg octavo-link-and-title-format)))
-    (kill-new links)
-    (message "Copied: %s" links)))
 
 ;;; List Backlinks
 
