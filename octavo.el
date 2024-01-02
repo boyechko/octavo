@@ -68,7 +68,9 @@
 (require 'format-spec)
 (require 'seq)
 
+;;;=============================================================================
 ;;; Variables
+;;;=============================================================================
 
 (defgroup octavo nil
   "A Zettelkasten implementation for Emacs."
@@ -76,7 +78,9 @@
   :group 'files
   :prefix "octavo-")
 
+;;------------------------------------------------------------------------------
 ;; Fundamental variables
+;;------------------------------------------------------------------------------
 
 (defcustom octavo-directory nil
   "Main Octavo directory."
@@ -140,7 +144,9 @@ This is only relevant if `octavo-link-format' includes the title."
   "The regular expression used to search for tags."
   :type 'regexp)
 
+;;------------------------------------------------------------------------------
 ;; Function variables
+;;------------------------------------------------------------------------------
 
 (defcustom octavo-new-note-header-function #'octavo-new-note-header
   "Function called by `octavo-new-note' to insert header in a new note.
@@ -167,20 +173,10 @@ If nil, tag will be inserted at point."
 Must take a single STRING argument."
   :type 'function)
 
-(make-obsolete-variable 'octavo-grep-function "The use of the
- 'octavo-grep-function' variable is deprecated.
- 'octavo-search-function' should be used instead"
-                        "0.5")
-
 (defcustom octavo-tag-search-function #'octavo-grep
   "Function used by `octavo-tag-search'.
 Must take a single STRING argument."
   :type 'function)
-
-(make-obsolete-variable 'octavo-tag-grep-function "The use of the
-  'octavo-tag-grep-function' variable is deprecated.
- 'octavo-tag-search-function' should be used instead"
-                        "0.5")
 
 (defcustom octavo-current-notes-function nil
   "User-defined function for listing currently open notes.
@@ -193,39 +189,40 @@ It should accept three variables: FORMAT-SPEC, ID, and TITLE.
 See `octavo-format-id-and-title' for an example."
   :type 'function)
 
+;;------------------------------------------------------------------------------
 ;; Format variables
+;;------------------------------------------------------------------------------
 
 (defcustom octavo-link-format "[[%i]]"
   "Format for inserted links.
-
 See `octavo-format-id-and-title' for what the default control
 sequences mean."
   :type 'string)
 
 (defcustom octavo-link-and-title-format "%t [[%i]]"
   "Format for link and title when inserted to together.
-
 See `octavo-format-id-and-title' for what the default control
 sequences mean."
   :type 'string)
 
 (defcustom octavo-completion-at-point-format "[[%i]] %t"
   "Format for completion table used by `octavo-completion-at-point'.
-
 See `octavo-format-id-and-title' for what the default control
 sequences mean."
   :type 'string)
 
+;;------------------------------------------------------------------------------
 ;; Link variables
+;;------------------------------------------------------------------------------
 
 (defcustom octavo-new-note-link-insert 'ask
   "Should `octavo-new-note' insert link to new note at point?
 
 Options:
-1. t - Always insert a link
-2. `octavo - Insert link only inside an existing note
-3. `ask - Ask user, yes or no
-4. nil - Never insert a link
+1) t - Always insert a link
+2) `octavo - Insert link only inside an existing note
+3) `ask - Ask user, yes or no
+4) nil - Never insert a link
 
 Calling `octavo-new-note' with a prefix-argument inserts a link
 regardless of how `octavo-new-note-link-insert' is set."
@@ -238,9 +235,9 @@ regardless of how `octavo-new-note-link-insert' is set."
   "Should `octavo-insert-link' insert both link and title?
 
 Options:
-1. t - Always inserts link and title; with `prefix-arg', only link
-2. `ask - Ask user, yes or no; with `prefix-arg', only link
-3. nil - Only insert link, not title; with `prefix-arg', include title
+1) t - Always inserts link and title; with \\[universal-argument], only link
+2) `ask - Ask user, yes or no; with \\[universal-argument], only link
+3) nil - Only insert link, not title; with \\[universal-argument], include title
 
 The format in which link and title are inserted can be configured
 by setting the variable `octavo-link-and-title-format'."
@@ -249,7 +246,7 @@ by setting the variable `octavo-link-and-title-format'."
                  (const :tag "Never" nil)))
 
 (defcustom octavo-enable-link-buttons t
-  "When non-nil, valid octavo-id links will be clickable buttons.
+  "When non-nil, valid Octavo ID links will be clickable buttons.
 Allows `octavo-make-link-buttons' to be added to `find-file-hook', so
 buttons will be automatically created when a note is opened."
   :type 'boolean)
@@ -259,7 +256,9 @@ buttons will be automatically created when a note is opened."
 See `octavo-new-note' for details."
   :type 'string)
 
+;;;=============================================================================
 ;;; Low-Level Functions
+;;;=============================================================================
 
 (defun octavo--singleton-p (list)
   "Return non-NIL if LIST is not null, is a list, and has a single element."
@@ -334,7 +333,6 @@ matches, return nil."
                   id)))))
 
 (defalias 'octavo-id-p 'octavo--id-file)
-(make-obsolete 'octavo-id-p 'octavo--id-file "0.6")
 
 (defun octavo-file-p (&optional file strict)
   "Return t if FILE is an Octavo file.
@@ -374,12 +372,6 @@ match; ignore case. If OCTAVO-ALIST is non-nil, use it."
             (push (car item) ids)))
         ids)
     (mapcar 'octavo--file-id (octavo--directory-files 'full))))
-
-(defun octavo--current-id ()
-  "Return the ID of Octavo in current buffer."
-  (or (octavo--file-id buffer-file-name)
-      (user-error "Not an Octavo file")))
-(make-obsolete 'octavo--current-id 'octavo--file-id "0.5")
 
 (defvar octavo--directory-files-cache nil
   "Store the result of `octavo--directory-files' to prevent re-scanning.
@@ -567,7 +559,9 @@ the file system directly via `octavo--id-file'."
            (octavo--file-title file))
           (t (error "Invalid target: %s" target)))))
 
+;;;=============================================================================
 ;;; Formatting
+;;;=============================================================================
 
 (defun octavo--processor (arg)
   "Process ARG into a list of octavo-files.
@@ -613,7 +607,9 @@ that `octavo-format-function' is set to."
 This is a wrapper around `octavo-format-function', which see."
   (funcall octavo-format-function format id title))
 
+;;;=============================================================================
 ;;; Buttons
+;;;=============================================================================
 
 (defun octavo-setup-auto-link-buttons ()
   "Enable automatic link creation when octavo-file is opened.
@@ -664,7 +660,9 @@ the starting position of the button."
     (make-button (match-beginning 1) (match-end 1)
                  'type 'octavo-link)))
 
+;;;=============================================================================
 ;;; Note Functions
+;;;=============================================================================
 
 (defun octavo--note-file-path (id title)
   "Generate full file-path for note with given ID and TITLE."
@@ -780,7 +778,9 @@ title."
       (set-visited-file-name new-file t t)
       (save-buffer))))
 
+;;;=============================================================================
 ;;; Find File
+;;;=============================================================================
 
 ;;;###autoload
 (defun octavo-find-file (&optional other-window)
@@ -789,10 +789,8 @@ If OTHER-WINDOW is non-nil (or command is executed with
 \\[universal-argument]), find file in other window."
   (interactive "p")
   (if other-window
-      (find-file-other-window
-       (octavo-select-file "Find file in other window: "))
-    (find-file
-       (octavo-select-file "Find file: "))))
+      (find-file-other-window (octavo-select-file "Find file in other window: "))
+    (find-file (octavo-select-file "Find file: "))))
 
 ;;;###autoload
 (defun octavo-find-file-by-id (id)
@@ -860,7 +858,9 @@ Optionally call a custom function by setting the variable
         (find-file (octavo-select-file "Links: " files))
       (user-error "No links found"))))
 
+;;;=============================================================================
 ;;; Insert Link
+;;;=============================================================================
 
 ;;;###autoload
 (defun octavo-insert-link (arg &optional title)
@@ -896,7 +896,9 @@ otherwise `octavo-link-format'."
   (when octavo-enable-link-buttons
     (octavo-make-link-buttons)))
 
+;;;=============================================================================
 ;;; Completion at Point
+;;;=============================================================================
 
 (defun octavo--format-candidates (&optional files format)
   "Return a list of FILES as formatted candidates, following FORMAT.
@@ -936,7 +938,9 @@ brackets \"[[\" initiates completion."
                 (when octavo-enable-link-buttons
                   (octavo-make-button-before-point))))))))
 
+;;;=============================================================================
 ;;; List Backlinks
+;;;=============================================================================
 
 (defun octavo--backlinks-list (id)
   "Return list of notes that link to note with ID."
@@ -952,7 +956,9 @@ brackets \"[[\" initiates completion."
         (find-file (octavo-select-file "Backlinks: " files))
       (user-error "No backlinks found"))))
 
+;;;=============================================================================
 ;;; Search
+;;;=============================================================================
 
 ;;;###autoload
 (defun octavo-search (string)
@@ -972,7 +978,9 @@ Opens search results in a grep buffer."
   (grep-compute-defaults)
   (rgrep regexp (concat "*." octavo-file-extension) octavo-directory nil))
 
+;;;=============================================================================
 ;;; Tag Functions
+;;;=============================================================================
 
 ;;;###autoload
 (defun octavo-tag-search (tag)
@@ -1043,7 +1051,9 @@ Select TAG, with completion, from list of all tags in Octavo notes."
         (find-file (octavo-select-file "Unlinked notes: " notes))
       (user-error "No unlinked notes found"))))
 
-;;; octavo-network - Backlinks and Forward Links Together
+;;;=============================================================================
+;;; Octavo-Network - Backlinks and Forward Links Together
+;;;=============================================================================
 
 (defun octavo-network ()
   "Find `octavo-backlinks' and `octavo-links-in-note' for current or selected note.
@@ -1063,9 +1073,9 @@ Backlinks and Links-in-Note are grouped separately."
           (dolist (file backlinks)
             (push (propertize file 'type 'backlink) resources))
           (find-file (octavo-select-file "Links: "
-                                     resources
-                                     'octavo--network-group-function
-                                     'identity)))
+                                         resources
+                                         'octavo--network-group-function
+                                         'identity)))
       (user-error "No links found"))))
 
 (defun octavo--network-group-function (file transform)
@@ -1084,5 +1094,4 @@ Backlinks and Links-in-Note are grouped separately."
 ;;               t))))
 
 (provide 'octavo)
-
 ;;; octavo.el ends here
