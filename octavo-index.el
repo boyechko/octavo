@@ -1,13 +1,18 @@
-;;; zk-index.el --- Index for zk   -*- lexical-binding: t; -*-
+;;; octavo-index.el --- Index for Octavo   -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2022-2023  Grant Rosson
+;; Copyright (C) 2023-2024 Richard Boyechko
 
-;; Author: Grant Rosson <https://github.com/localauthor>
-;; Created: January 25, 2022
+;; Created: June 28, 2023
 ;; License: GPL-3.0-or-later
-;; Version: 0.9
-;; Homepage: https://github.com/localauthor/zk
-;; Package-Requires: ((emacs "27.1")(zk "0.3"))
+;; Version: 0.1
+;; Homepage: https://github.com/boyechko/octavo
+;; Package-Requires: ((emacs "26.1") (octavo "0.1"))
+
+;; Created by Richard Boyechko based on zk.el by Grant Rosson
+;; Original Author: Grant Rosson <https://github.com/localauthor>
+;; Forked from: https://github.com/localauthor/zk
+;; Original Creation Date: January 4, 2022
+;; Copyright (C) 2022-2023 Grant Rosson
 
 ;; This program is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by the Free
@@ -24,119 +29,117 @@
 
 ;;; Commentary:
 
-;; ZK-Index: A sortable, searchable, narrowable, semi-persistent selection of
+;; Octavo-Index: A sortable, searchable, narrowable, semi-persistent selection of
 ;; notes, in the form of clickable links.
 
-;; To enable integration with Embark, include '(zk-index-setup-embark)' in
+;; To enable integration with Embark, include '(octavo-index-setup-embark)' in
 ;; your init config.
 
 ;;; Code:
 
-(require 'zk)
+(require 'octavo)
 (require 'hl-line)
 
 ;;; Custom Variables
 
-(defgroup zk-index nil
-  "Index interface for zk."
+(defgroup octavo-index nil
+  "Index interface for Octavo."
   :group 'text
   :group 'files
-  :prefix "zk-index")
+  :prefix "octavo-index")
 
-(defcustom zk-index-buffer-name "*ZK-Index*"
-  "Name for ZK-Index buffer."
+(defcustom octavo-index-buffer-name "*Octavo-Index*"
+  "Name for Octavo-Index buffer."
   :type 'string)
 
-(defcustom zk-index-format-function 'zk-index--format-candidates
-  "Default formatting function for ZK-Index candidates.
-See `zk-index--format-candidates' for details."
+(defcustom octavo-index-format-function 'octavo-index--format-candidates
+  "Default formatting function for Octavo-Index candidates.
+See `octavo-index--format-candidates' for details."
   :type 'function)
 
-(defcustom zk-index-invisible-ids t
+(defcustom octavo-index-invisible-ids t
   "If non-nil, IDs will not be visible in the index."
   :type 'boolean)
 
-(defcustom zk-index-format "%t %i"
+(defcustom octavo-index-format "%t %i"
   "Default format for candidates in the index."
   :type 'string)
 
-(defcustom zk-index-prefix "-> "
-  "String to prepend to note names in ZK-Index."
+(defcustom octavo-index-prefix "-> "
+  "String to prepend to note names in Octavo-Index."
   :type 'string)
 
-(defcustom zk-index-auto-scroll t
-  "Enable automatically showing note at point in ZK-Index."
+(defcustom octavo-index-auto-scroll t
+  "Enable automatically showing note at point in Octavo-Index."
   :type 'boolean)
 
-(defcustom zk-index-view-hide-cursor t
-  "Hide cursor in `zk-index-view-mode'."
+(defcustom octavo-index-view-hide-cursor t
+  "Hide cursor in `octavo-index-view-mode'."
   :type 'boolean)
 
-(defcustom zk-index-display-buffer-function 'zk-index-display-buffer
-  "Function that shows the buffer of selected Zk-Index candidate.
+(defcustom octavo-index-display-buffer-function 'octavo-index-display-buffer
+  "Function that shows the buffer of selected Octavo-Index candidate.
 It should take one argument, the BUFFER associated with a
-zk-file. See `zk-index-display-buffer' for an example."
+octavo-file. See `octavo-index-display-buffer' for an example."
   :type 'function)
-(make-obsolete 'zk-index-button-display-function
-               'zk-index-display-buffer-function "0.9")
+(make-obsolete 'octavo-index-button-display-function
+               'octavo-index-display-buffer-function "0.9")
 
-(defcustom zk-index-help-echo zk-index-format
-  "Whether or how to display help-echo for the Zk-Index buttons.
+(defcustom octavo-index-help-echo octavo-index-format
+  "Whether or how to display help-echo for the Octavo-Index buttons.
 It can be NIL (inhibit help echo), a function taking one
 argument, the FILE associated with the button, or a format
-string appropriate for `zk--format'."
+string appropriate for `octavo--format'."
   :type '(choice (string :tag "Format string")
                  (function :tag "Format function")
                  (const :tag "None" nil)))
-(make-obsolete 'zk-index-help-echo-function
-               'zk-index-help-echo "0.9")
+(make-obsolete 'octavo-index-help-echo-function
+               'octavo-index-help-echo "0.9")
 
-;;; ZK-Index Major Mode Settings
+;;; Octavo-Index Major Mode Settings
 
-(defvar zk-index-mode-line-orig nil
+(defvar octavo-index-mode-line-orig nil
   "Value of `mode-line-misc-info' at the start of mode.")
 
-(defvar zk-index-mode-map
+(defvar octavo-index-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "n") #'zk-index-next-line)
-    (define-key map (kbd "p") #'zk-index-previous-line)
-    (define-key map (kbd "v") #'zk-index-view-note)
+    (define-key map (kbd "n") #'octavo-index-next-line)
+    (define-key map (kbd "p") #'octavo-index-previous-line)
+    (define-key map (kbd "v") #'octavo-index-view-note)
     (define-key map (kbd "o") #'other-window)
-    (define-key map (kbd "f") #'zk-index-focus)
-    (define-key map (kbd "s") #'zk-index-search)
-    (define-key map (kbd "g") #'zk-index-query-refresh)
-    (define-key map (kbd "c") #'zk-index-current-notes)
-    (define-key map (kbd "i") #'zk-index-refresh)
-    (define-key map (kbd "S") #'zk-index-sort-size)
-    (define-key map (kbd "M") #'zk-index-sort-modified)
-    (define-key map (kbd "C") #'zk-index-sort-created)
-    (define-key map (kbd "RET") #'zk-index-open-note)
+    (define-key map (kbd "f") #'octavo-index-focus)
+    (define-key map (kbd "s") #'octavo-index-search)
+    (define-key map (kbd "g") #'octavo-index-query-refresh)
+    (define-key map (kbd "c") #'octavo-index-current-notes)
+    (define-key map (kbd "i") #'octavo-index-refresh)
+    (define-key map (kbd "S") #'octavo-index-sort-size)
+    (define-key map (kbd "M") #'octavo-index-sort-modified)
+    (define-key map (kbd "C") #'octavo-index-sort-created)
+    (define-key map (kbd "RET") #'octavo-index-open-note)
     (define-key map (kbd "q") #'delete-window)
     (make-composed-keymap map tabulated-list-mode-map))
-  "Keymap for ZK-Index buffer.")
+  "Keymap for Octavo-Index buffer.")
 
-(define-derived-mode zk-index-mode nil "ZK-Index"
-  "Mode for `zk-index'.
-\\{zk-index-mode-map}"
-  (setq zk-index-mode-line-orig mode-line-misc-info)
+(define-derived-mode octavo-index-mode nil "Octavo-Index"
+  "Mode for `octavo-index'.
+\\{octavo-index-mode-map}"
+  (setq octavo-index-mode-line-orig mode-line-misc-info)
   (read-only-mode)
   (hl-line-mode)
   (make-local-variable 'show-paren-mode)
   (setq-local show-paren-mode nil)
   (setq cursor-type nil))
 
-
 ;;; Declarations
 
-(defvar zk-index-last-sort-function nil)
-(defvar zk-index-last-format-function nil)
-(defvar zk-index-query-mode-line nil)
-(defvar zk-index-query-terms nil)
-(defvar zk-search-history)
+(defvar octavo-index-last-sort-function nil)
+(defvar octavo-index-last-format-function nil)
+(defvar octavo-index-query-mode-line nil)
+(defvar octavo-index-query-terms nil)
+(defvar octavo-search-history)
 
-(declare-function zk-file-p zk)
-(declare-function zk--grep-id-list zk)
-
+(declare-function octavo-file-p octavo)
+(declare-function octavo--grep-id-list octavo)
 
 ;;; Embark Integration
 
@@ -144,146 +147,146 @@ string appropriate for `zk--format'."
 (defvar embark-target-finders)
 (defvar embark-exporters-alist)
 
-(defun zk-index-setup-embark ()
-  "Setup Embark integration for `zk-index'."
+(defun octavo-index-setup-embark ()
+  "Setup Embark integration for `octavo-index'."
   (with-eval-after-load 'embark
-    (add-to-list 'embark-multitarget-actions 'zk-index)
-    (add-to-list 'embark-multitarget-actions 'zk-copy-link-and-title)
-    (add-to-list 'embark-multitarget-actions 'zk-follow-link-at-point)
-    (add-to-list 'embark-multitarget-actions 'zk-index-insert-link)
-    (add-to-list 'embark-multitarget-actions 'zk-index-narrow)
-    (add-to-list 'embark-target-finders 'zk-index-embark-target)
-    (add-to-list 'embark-exporters-alist '(zk-file . zk-index-narrow))
-    (add-to-list 'embark-exporters-alist '(zk-id . zk-index-narrow))
-    (define-key zk-file-map (kbd "n")  #'zk-index-narrow)
-    (define-key zk-id-map (kbd "n") #'zk-index-narrow)
-    (define-key zk-id-map (kbd "i") #'zk-index-insert-link)))
+    (add-to-list 'embark-multitarget-actions 'octavo-index)
+    (add-to-list 'embark-multitarget-actions 'octavo-copy-link-and-title)
+    (add-to-list 'embark-multitarget-actions 'octavo-follow-link-at-point)
+    (add-to-list 'embark-multitarget-actions 'octavo-index-insert-link)
+    (add-to-list 'embark-multitarget-actions 'octavo-index-narrow)
+    (add-to-list 'embark-target-finders 'octavo-index-embark-target)
+    (add-to-list 'embark-exporters-alist '(octavo-file . octavo-index-narrow))
+    (add-to-list 'embark-exporters-alist '(octavo-id . octavo-index-narrow))
+    (define-key octavo-file-map (kbd "n")  #'octavo-index-narrow)
+    (define-key octavo-id-map (kbd "n") #'octavo-index-narrow)
+    (define-key octavo-id-map (kbd "i") #'octavo-index-insert-link)))
 
-(defun zk-index-embark-target ()
-  "Target zk-id of button at point in ZK-Index."
-  (when (zk-index--button-at-point-p)
+(defun octavo-index-embark-target ()
+  "Target octavo-id of button at point in Octavo-Index."
+  (when (octavo-index--button-at-point-p)
     (save-excursion
       (beginning-of-line)
-      (re-search-forward zk-id-regexp (line-end-position)))
-    (let ((zk-id (match-string-no-properties 0)))
-      `(zk-id ,zk-id . ,(cons (line-beginning-position) (line-end-position))))))
+      (re-search-forward octavo-id-regexp (line-end-position)))
+    (let ((octavo-id (match-string-no-properties 0)))
+      `(octavo-id ,octavo-id . ,(cons (line-beginning-position) (line-end-position))))))
 
-(defun zk-index-narrow (arg)
-  "Produce a ZK-Index narrowed to notes listed in ARG.
-For details of ARG see `zk--processor'. When called on items
+(defun octavo-index-narrow (arg)
+  "Produce a Octavo-Index narrowed to notes listed in ARG.
+For details of ARG see `octavo--processor'. When called on items
 selected by `embark-select', narrows index to selected
 candidates. Alternatively, `embark-export' exports candidates to
 a new index."
-  (let ((files (zk--processor arg)))
-    (zk-index-refresh files)
-    (zk-index--reset-mode-line)))
+  (let ((files (octavo--processor arg)))
+    (octavo-index-refresh files)
+    (octavo-index--reset-mode-line)))
 
 ;;; Formatting
 
-(defun zk-index--format-candidates (files &optional format)
-  "Return a list of Zk-Index candidates based on FILES and FORMAT.
+(defun octavo-index--format-candidates (files &optional format)
+  "Return a list of Octavo-Index candidates based on FILES and FORMAT.
 Each candidate is an alist with keys 'FILE and 'LABEL, the
-latter being the return value of `zk--format' called with
-FORMAT (defaults to `zk-index-format'). FILES must be a list
-of filepaths. This is the default `zk-index-format-function'."
-  (let* ((format (or format zk-index-format))
+latter being the return value of `octavo--format' called with
+FORMAT (defaults to `octavo-index-format'). FILES must be a list
+of filepaths. This is the default `octavo-index-format-function'."
+  (let* ((format (or format octavo-index-format))
          output)
     (dolist (file files output)
-      (when-let* ((id-title (zk--parse-file (or file "")))
-                  (id (if zk-index-invisible-ids
+      (when-let* ((id-title (octavo--parse-file (or file "")))
+                  (id (if octavo-index-invisible-ids
                           (propertize (car id-title) 'invisible t)
                         (car id-title)))
                   (title (cdr id-title)))
         (push `((file . ,file)
-                (label . ,(zk--format format id title)))
+                (label . ,(octavo--format format id title)))
               output)))))
 
 ;;; Main Stack
 
 ;;;###autoload
-(defun zk-index (&optional buf-name)
-  "Open ZK-Index.
+(defun octavo-index (&optional buf-name)
+  "Open Octavo-Index.
 If BUF-NAME is specified, either switch or initialize a
 buffer with that name."
   (interactive)
-  (let* ((buf-name (or buf-name zk-index-buffer-name))
+  (let* ((buf-name (or buf-name octavo-index-buffer-name))
          ;; TODO Make ALL-FRAMES argument to `get-buffer-window' customizable?
          (win (get-buffer-window buf-name nil))) ; == check only current frame
-    (unless (get-buffer zk-index-buffer-name)
-      (zk-index-refresh nil nil nil buf-name))
+    (unless (get-buffer octavo-index-buffer-name)
+      (octavo-index-refresh nil nil nil buf-name))
     (if win
         (select-window win)
       (pop-to-buffer buf-name))))
 
-(defun zk-index-refresh (&optional files format-fn sort-fn buf-name)
-  "Refresh the Zk-Index.
+(defun octavo-index-refresh (&optional files format-fn sort-fn buf-name)
+  "Refresh the Octavo-Index.
 Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
   (interactive)
   (let ((inhibit-read-only t)
-        (files (or files (zk--directory-files 'full nil 'refresh)))
-        (buf-name (or buf-name zk-index-buffer-name)))
-    (setq zk-index-last-format-function format-fn
-          zk-index-last-sort-function sort-fn
-          default-directory (expand-file-name zk-directory))
+        (files (or files (octavo--directory-files 'full nil 'refresh)))
+        (buf-name (or buf-name octavo-index-buffer-name)))
+    (setq octavo-index-last-format-function format-fn
+          octavo-index-last-sort-function sort-fn
+          default-directory (expand-file-name octavo-directory))
     (unless (get-buffer buf-name)
-      (when zk-default-backlink
-        (unless (zk-file-p)
-          (zk-find-file-by-id zk-default-backlink)))
+      (when octavo-default-backlink
+        (unless (octavo-file-p)
+          (octavo-find-file-by-id octavo-default-backlink)))
       (generate-new-buffer buf-name))
     (with-current-buffer buf-name
       (let ((line (line-number-at-pos)))
         (setq-local truncate-lines t)
         (erase-buffer)
-        (zk-index-mode)
-        (zk-index--reset-mode-name)
-        (zk-index--populate-index files format-fn sort-fn)
+        (octavo-index-mode)
+        (octavo-index--reset-mode-name)
+        (octavo-index--populate-index files format-fn sort-fn)
         (goto-char (point-min))
-        (unless (zk-index-narrowed-p buf-name)
-          (zk-index--reset-mode-line)
+        (unless (octavo-index-narrowed-p buf-name)
+          (octavo-index--reset-mode-line)
           (goto-line line))))))
 
 (eval-and-compile
-  (define-button-type 'zk-index
+  (define-button-type 'octavo-index
     'follow-link t
     'button-data nil
-    'action 'zk-index--button-action
+    'action 'octavo-index--button-action
     'face 'default))
 
-(defun zk-index--populate-index (files &optional format-fn sort-fn)
-  "Populate the current buffer with Zk-Index candidates.
-FILES are sorted with SORT-FN (or `zk-index--sort-modified')
-and formatted with FORMAT-FN (or `zk-index-format-function')."
-  (let* ((sort-fn (or sort-fn 'zk-index--sort-modified))
-         (format-fn (or format-fn zk-index-format-function))
+(defun octavo-index--populate-index (files &optional format-fn sort-fn)
+  "Populate the current buffer with Octavo-Index candidates.
+FILES are sorted with SORT-FN (or `octavo-index--sort-modified')
+and formatted with FORMAT-FN (or `octavo-index-format-function')."
+  (let* ((sort-fn (or sort-fn 'octavo-index--sort-modified))
+         (format-fn (or format-fn octavo-index-format-function))
          (candidates (nreverse (funcall format-fn (funcall sort-fn files))))
          (count 0))
     (dolist (alist candidates)
       (let-alist alist
         (unless (zerop count) (insert "\n"))
         (insert-text-button .label
-                            'type 'zk-index
+                            'type 'octavo-index
                             'button-data .file
-                            'help-echo (when zk-index-help-echo
-                                         (zk-index--help-echo .file .label)))
+                            'help-echo (when octavo-index-help-echo
+                                         (octavo-index--help-echo .file .label)))
         (setq count (1+ count))))
-    (zk-index--set-mode-name (format " [%d]" count))))
+    (octavo-index--set-mode-name (format " [%d]" count))))
 
-(defun zk-index--help-echo (file label)
+(defun octavo-index--help-echo (file label)
   "Generate help-echo when FILE's button (with LABEL) is at point.
-The return depends on the value of `zk-index-help-echo'."
-  (cond ((functionp zk-index-help-echo)
-         (funcall zk-index-help-echo file))
-        ((equal zk-index-help-echo zk-index-format)
+The return depends on the value of `octavo-index-help-echo'."
+  (cond ((functionp octavo-index-help-echo)
+         (funcall octavo-index-help-echo file))
+        ((equal octavo-index-help-echo octavo-index-format)
          label)
-        ((stringp zk-index-help-echo)
-         (let ((id-title (zk--parse-file file)))
-           (zk--format zk-index-help-echo (car id-title) (cdr id-title))))
+        ((stringp octavo-index-help-echo)
+         (let ((id-title (octavo--parse-file file)))
+           (octavo--format octavo-index-help-echo (car id-title) (cdr id-title))))
         (t
          nil)))
 
-(defun zk-index-display-buffer (buffer)
-  "Display BUFFER corresponding to the pressed Zk-Index button.
-This is the default value of `zk-index-display-buffer-function'."
+(defun octavo-index-display-buffer (buffer)
+  "Display BUFFER corresponding to the pressed Octavo-Index button.
+This is the default value of `octavo-index-display-buffer-function'."
   (pop-to-buffer
    buffer
    (if (one-window-p)
@@ -292,23 +295,23 @@ This is the default value of `zk-index-display-buffer-function'."
      (display-buffer-use-some-window
       buffer '((inhibit-same-window . t))))))
 
-(defun zk-index--button-action (file)
-  "Action taken when `zk-index' button is pressed.
+(defun octavo-index--button-action (file)
+  "Action taken when `octavo-index' button is pressed.
 FILE is the content of button's 'BUTTON-DATA property, which
-for `zk-index' button should be the filepath of the note
+for `octavo-index' button should be the filepath of the note
 represented by the button."
-  ;; This function merely passes the buck to `zk-index-display-buffer-function',
+  ;; This function merely passes the buck to `octavo-index-display-buffer-function',
   ;; which should do the actual displaying. Maintaining this extra layer of
   ;; indirection allows adding other behavior in the future (e.g. keeping a
   ;; tally of all buttons pressed in a session).
-  (funcall zk-index-display-buffer-function (find-file-noselect file)))
+  (funcall octavo-index-display-buffer-function (find-file-noselect file)))
 
-(defun zk-index-narrowed-p (buf-name)
+(defun octavo-index-narrowed-p (buf-name)
   "Return t when index is narrowed in buffer BUF-NAME."
   (with-current-buffer (or buf-name
-                           zk-index-buffer-name)
+                           octavo-index-buffer-name)
     (if (< (count-lines (point-min) (point-max))
-           (length (zk--directory-files)))
+           (length (octavo--directory-files)))
         t nil)))
 
 ;;; Index Search and Focus Functions
@@ -316,83 +319,83 @@ represented by the button."
 ;;;; Index Search
 ;; narrow index based on search of notes' full text
 
-(defun zk-index-search (regexp)
+(defun octavo-index-search (regexp)
   "Narrow index based on REGEXP search of note contents."
   (interactive
-   (list (read-string "Search: " nil 'zk-search-history)))
-  (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh (zk-index-query-files regexp 'search)
-                        zk-index-last-format-function
-                        zk-index-last-sort-function
+   (list (read-string "Search: " nil 'octavo-search-history)))
+  (if (eq major-mode 'octavo-index-mode)
+      (octavo-index-refresh (octavo-index-query-files regexp 'search)
+                        octavo-index-last-format-function
+                        octavo-index-last-sort-function
                         (buffer-name))
-    (user-error "Not in a ZK-Index")))
+    (user-error "Not in a Octavo-Index")))
 
 ;;;; Index Focus
 ;; narrow index based on search of note titles (case sensitive)
 ;; an alternative to `consult-focus-lines'
 
-(defun zk-index-focus (regexp)
+(defun octavo-index-focus (regexp)
   "Narrow index based on REGEXP search of note titles."
   (interactive
-   (list (read-string "Focus: " nil 'zk-search-history)))
-  (if (eq major-mode 'zk-index-mode)
-      (zk-index-refresh (zk-index-query-files regexp 'focus)
-                        zk-index-last-format-function
-                        zk-index-last-sort-function
+   (list (read-string "Focus: " nil 'octavo-search-history)))
+  (if (eq major-mode 'octavo-index-mode)
+      (octavo-index-refresh (octavo-index-query-files regexp 'focus)
+                        octavo-index-last-format-function
+                        octavo-index-last-sort-function
                         (buffer-name))
-    (user-error "Not in a ZK-Index")))
+    (user-error "Not in a Octavo-Index")))
 
 ;;;; Low-level Query Functions
 
-(defvar zk-index-query-terms nil
+(defvar octavo-index-query-terms nil
   "Ordered list of current query terms.
 Takes form of (QUERY-TYPE . REGEXP), where QUERY-TYPE is
 `FOCUS or `SEARCH, and REGEXP is the query string. Recent
 items listed first.")
 
-(defun zk-index-query-files (regexp query-type)
-  "Return narrowed list of Zk-Files matching REGEXP.
+(defun octavo-index-query-files (regexp query-type)
+  "Return narrowed list of Octavo-Files matching REGEXP.
 QUERY-TYPE can be either `FOCUS (filename only) or
 `SEARCH (full text)."
-  (let* ((scope (when (zk-index-narrowed-p (buffer-name))
-                  (zk-index--current-id-list (buffer-name))))
+  (let* ((scope (when (octavo-index-narrowed-p (buffer-name))
+                  (octavo-index--current-id-list (buffer-name))))
          (matches (pcase query-type
-                    ('focus (zk--id-list regexp))
-                    ('search (zk--grep-id-list regexp))
+                    ('focus (octavo--id-list regexp))
+                    ('search (octavo--grep-id-list regexp))
                     (_ (error "Unknown query type: `%s'" query-type))))
          (matches (if scope
                       (cl-intersection scope matches :test #'string=)
                     matches))
-         (files (mapcar (lambda (id) (zk--parse-id 'file-path id)) matches)))
-    (add-to-history 'zk-search-history regexp)
+         (files (mapcar (lambda (id) (octavo--parse-id 'file-path id)) matches)))
+    (add-to-history 'octavo-search-history regexp)
     (when files
-      (let ((mode-line (zk-index-query-mode-line query-type regexp)))
-        (setq zk-index-query-mode-line mode-line)
-        (zk-index--set-mode-line mode-line)
-        (zk-index--reset-mode-name)))
+      (let ((mode-line (octavo-index-query-mode-line query-type regexp)))
+        (setq octavo-index-query-mode-line mode-line)
+        (octavo-index--set-mode-line mode-line)
+        (octavo-index--reset-mode-name)))
     (when (stringp files)
       (setq files (list files)))
     (or files
         (user-error "No matches for \"%s\"" regexp))))
 
-(defun zk-index-query-refresh ()
+(defun octavo-index-query-refresh ()
   "Refresh narrowed index, based on last focus or search query."
   (interactive)
   (let ((mode mode-name)
-        (files (zk-index--current-file-list)))
+        (files (octavo-index--current-file-list)))
     (unless (stringp files)
-      (zk-index-refresh files
+      (octavo-index-refresh files
                         nil
-                        zk-index-last-sort-function)
+                        octavo-index-last-sort-function)
       (setq mode-name mode))))
 
-(defun zk-index-query-mode-line (query-type regexp)
+(defun octavo-index-query-mode-line (query-type regexp)
   "Generate new mode line after search query.
 QUERY-TYPE is either 'focus or 'search, with query term REGEXP."
-  (push (cons query-type regexp) zk-index-query-terms)
+  (push (cons query-type regexp) octavo-index-query-terms)
   ;; Sort the different terms into two lists
-  (let* ((focused (cl-remove 'search zk-index-query-terms :key 'car))
-         (searched (cl-remove 'focus zk-index-query-terms :key 'car))
+  (let* ((focused (cl-remove 'search octavo-index-query-terms :key 'car))
+         (searched (cl-remove 'focus octavo-index-query-terms :key 'car))
          (formatted (mapcar (lambda (term-list)
                               (when term-list
                                 ;; (CMD . REGEXP)
@@ -413,18 +416,18 @@ QUERY-TYPE is either 'focus or 'search, with query term REGEXP."
                        "\" | ")
             "\"]")))
 
-(defun zk-index--set-mode-line (string)
-  "Add STRING to mode-line in `zk-index-mode'."
-  (when (eq major-mode 'zk-index-mode)
+(defun octavo-index--set-mode-line (string)
+  "Add STRING to mode-line in `octavo-index-mode'."
+  (when (eq major-mode 'octavo-index-mode)
     (setq-local mode-line-misc-info string)))
 
-(defun zk-index--reset-mode-line ()
-  "Reset mode-line in `zk-index-mode'."
-  (setq-local mode-line-misc-info zk-index-mode-line-orig)
-  (setq zk-index-query-mode-line nil
-        zk-index-query-terms nil))
+(defun octavo-index--reset-mode-line ()
+  "Reset mode-line in `octavo-index-mode'."
+  (setq-local mode-line-misc-info octavo-index-mode-line-orig)
+  (setq octavo-index-query-mode-line nil
+        octavo-index-query-terms nil))
 
-(defun zk-index--current-id-list (buf-name &optional beg end)
+(defun octavo-index--current-id-list (buf-name &optional beg end)
   "Return list of IDs for index in BUF-NAME.
 If BEG and END are given, only return the IDs in the lines
 between those positions, inclusive."
@@ -441,69 +444,69 @@ between those positions, inclusive."
       (save-excursion
         (goto-char beg)
         (save-match-data
-          (while (re-search-forward zk-id-regexp end t)
+          (while (re-search-forward octavo-id-regexp end t)
             (push (match-string-no-properties 0) ids))))
       (nreverse ids))))
 
 ;;; Index Sort Functions
 
-(defun zk-index-sort-modified ()
+(defun octavo-index-sort-modified ()
   "Sort index by last modified."
   (interactive)
-  (if (eq major-mode 'zk-index-mode)
+  (if (eq major-mode 'octavo-index-mode)
       (progn
-        (zk-index-refresh (zk-index--current-file-list)
-                          zk-index-last-format-function
-                          #'zk-index--sort-modified
+        (octavo-index-refresh (octavo-index--current-file-list)
+                          octavo-index-last-format-function
+                          #'octavo-index--sort-modified
                           (buffer-name))
-        (zk-index--set-mode-name " by modified"))
-    (user-error "Not in a ZK-Index")))
+        (octavo-index--set-mode-name " by modified"))
+    (user-error "Not in a Octavo-Index")))
 
-(defun zk-index-sort-created ()
+(defun octavo-index-sort-created ()
   "Sort index by date created."
   (interactive)
-  (if (eq major-mode 'zk-index-mode)
+  (if (eq major-mode 'octavo-index-mode)
       (progn
-        (zk-index-refresh (zk-index--current-file-list)
-                          zk-index-last-format-function
-                          #'zk-index--sort-created
+        (octavo-index-refresh (octavo-index--current-file-list)
+                          octavo-index-last-format-function
+                          #'octavo-index--sort-created
                           (buffer-name))
-        (zk-index--set-mode-name " by created"))
-    (user-error "Not in a ZK-Index")))
+        (octavo-index--set-mode-name " by created"))
+    (user-error "Not in a Octavo-Index")))
 
-(defun zk-index-sort-size ()
+(defun octavo-index-sort-size ()
   "Sort index by size."
   (interactive)
-  (if (eq major-mode 'zk-index-mode)
+  (if (eq major-mode 'octavo-index-mode)
       (progn
-        (zk-index-refresh (zk-index--current-file-list)
-                          zk-index-last-format-function
-                          #'zk-index--sort-size
+        (octavo-index-refresh (octavo-index--current-file-list)
+                          octavo-index-last-format-function
+                          #'octavo-index--sort-size
                           (buffer-name))
-        (zk-index--set-mode-name " by size"))
-    (user-error "Not in a ZK-Index")))
+        (octavo-index--set-mode-name " by size"))
+    (user-error "Not in a Octavo-Index")))
 
-(defun zk-index--set-mode-name (string)
-  "Add STRING to `mode-name' in `zk-index-mode'."
-  (when (eq major-mode 'zk-index-mode)
+(defun octavo-index--set-mode-name (string)
+  "Add STRING to `mode-name' in `octavo-index-mode'."
+  (when (eq major-mode 'octavo-index-mode)
     (setq mode-name (concat mode-name string))))
 
-(defun zk-index--reset-mode-name ()
-  "Reset `mode-name' in `zk-index-mode'."
-  (setq mode-name "ZK-Index"))
+(defun octavo-index--reset-mode-name ()
+  "Reset `mode-name' in `octavo-index-mode'."
+  (setq mode-name "Octavo-Index"))
 
-(defun zk-index--current-file-list ()
+(defun octavo-index--current-file-list ()
   "Return list files in current index."
-  (let* ((ids (zk-index--current-id-list (buffer-name)))
-         (files (mapcar (lambda (id) (zk--parse-id 'file-path id)) ids)))
+  (let* ((ids (octavo-index--current-id-list (buffer-name)))
+         (files (mapcar (lambda (id) (octavo--parse-id 'file-path id)) ids)))
     (when files
       files)))
 
-(defun zk-index--sort-created (files)
+(defun octavo-index--sort-created (files)
   "Sort FILES in ascending alphabetical order by ID."
   (let ((ht (make-hash-table :test #'equal :size 5000)))
     (mapc (lambda (x)
-            (puthash x (car (zk--parse-file x)) ht))
+            (puthash x (car (octavo--parse-file x)) ht))
           files)
     (sort files
           (lambda (a b)
@@ -511,7 +514,7 @@ between those positions, inclusive."
                   (two (gethash b ht)))
               (string< two one))))))
 
-(defun zk-index--sort-modified (list)
+(defun octavo-index--sort-modified (list)
   "Sort LIST for latest modification."
   (let ((ht (make-hash-table :test #'equal :size 5000)))
     (dolist (x list)
@@ -524,7 +527,7 @@ between those positions, inclusive."
                    (gethash b ht)))
               (time-less-p two one))))))
 
-(defun zk-index--sort-size (list)
+(defun octavo-index--sort-size (list)
   "Sort LIST for latest modification."
   (sort list
         (lambda (a b)
@@ -533,136 +536,136 @@ between those positions, inclusive."
           (> (or (file-attribute-size (file-attributes a)) -1)
              (or (file-attribute-size (file-attributes b)) -1)))))
 
-;;; ZK-Index Keymap Commands
+;;; Octavo-Index Keymap Commands
 
-(defun zk-index-open-note ()
+(defun octavo-index-open-note ()
   "Open note."
   (interactive)
   (beginning-of-line)
   (push-button nil t))
 
-(defvar-local zk-index-view--kill nil)
+(defvar-local octavo-index-view--kill nil)
 
-(defun zk-index-view-note ()
-  "View note in `zk-index-view-mode'."
+(defun octavo-index-view-note ()
+  "View note in `octavo-index-view-mode'."
   (interactive)
   (beginning-of-line)
-  (let* ((id (zk-index--button-at-point-p))
-         (file (zk--parse-id 'file-path id))
+  (let* ((id (octavo-index--button-at-point-p))
+         (file (octavo--parse-id 'file-path id))
          (kill (unless (get-file-buffer file)
                  t))
          (buffer (find-file-noselect file)))
-    (funcall zk-index-display-buffer-function buffer)
-    (setq-local zk-index-view--kill kill)
-    (zk-index-view-mode)))
+    (funcall octavo-index-display-buffer-function buffer)
+    (setq-local octavo-index-view--kill kill)
+    (octavo-index-view-mode)))
 
-(defun zk-index-current-notes ()
-  "Open ZK-Index listing currently open notes."
+(defun octavo-index-current-notes ()
+  "Open Octavo-Index listing currently open notes."
   (interactive)
-  (zk-index
-   (zk--current-notes-list)
-   zk-index-last-format-function
-   zk-index-last-sort-function))
+  (octavo-index
+   (octavo--current-notes-list)
+   octavo-index-last-format-function
+   octavo-index-last-sort-function))
 
-(defun zk-index--button-at-point-p (&optional pos)
-  "Return zk-ID when `zk-index' button is at point.
+(defun octavo-index--button-at-point-p (&optional pos)
+  "Return octavo-ID when `octavo-index' button is at point.
 Takes an option POS position argument."
   (when-let* ((button (button-at (or pos (point))))
-              (_ (button-has-type-p button 'zk-index))
+              (_ (button-has-type-p button 'octavo-index))
               (file (button-get button 'button-data)))
-    (ezeka-zk-file-id file)))
+    (ezeka-octavo-file-id file)))
 
-(defun zk-index-insert-link (&optional id)
-  "Insert zk-link in `other-window' for button ID at point."
-  (interactive (list (or (zk--id-at-point)
-                         (zk-index--button-at-point-p))))
-  (cond ((derived-mode-p 'zk-index-mode)
+(defun octavo-index-insert-link (&optional id)
+  "Insert octavo-link in `other-window' for button ID at point."
+  (interactive (list (or (octavo--id-at-point)
+                         (octavo-index--button-at-point-p))))
+  (cond ((derived-mode-p 'octavo-index-mode)
          (with-selected-window (other-window-for-scrolling)
-           (zk-insert-link id)))
-        ((zk--id-at-point)
-         (user-error "Move point off zk-id before inserting"))
+           (octavo-insert-link id)))
+        ((octavo--id-at-point)
+         (user-error "Move point off octavo-id before inserting"))
         (t
-         (zk-insert-link id))))
+         (octavo-insert-link id))))
 
-(defvar-local zk-index-view--cursor nil)
+(defvar-local octavo-index-view--cursor nil)
 
-(define-minor-mode zk-index-view-mode
-  "Minor mode for `zk-index-auto-scroll'."
+(define-minor-mode octavo-index-view-mode
+  "Minor mode for `octavo-index-auto-scroll'."
   :init-value nil
   :global nil
-  :keymap '(((kbd "n") . zk-index-next-line)
-            ((kbd "p") . zk-index-previous-line)
-            ([remap read-only-mode] . zk-index-view-mode)
+  :keymap '(((kbd "n") . octavo-index-next-line)
+            ((kbd "p") . octavo-index-previous-line)
+            ([remap read-only-mode] . octavo-index-view-mode)
             ((kbd "q") . quit-window))
-  (if zk-index-view-mode
+  (if octavo-index-view-mode
       (progn
         (read-only-mode)
-        (use-local-map zk-index-mode-map)
-        (when zk-index-view-hide-cursor
+        (use-local-map octavo-index-mode-map)
+        (when octavo-index-view-hide-cursor
           (progn
             (scroll-lock-mode 1)
-            (setq-local zk-index-view--cursor
+            (setq-local octavo-index-view--cursor
                         cursor-type)
             (setq-local cursor-type nil))))
     (read-only-mode -1)
     (use-local-map nil)
-    (when zk-index-view-hide-cursor
+    (when octavo-index-view-hide-cursor
       (scroll-lock-mode -1)
-      (setq-local cursor-type (or zk-index-view--cursor
+      (setq-local cursor-type (or octavo-index-view--cursor
                                   t)))))
 
-(defun zk-index-next-line ()
+(defun octavo-index-next-line ()
   "Move to next line.
-If `zk-index-auto-scroll' is non-nil, show note in other window."
+If `octavo-index-auto-scroll' is non-nil, show note in other window."
   (interactive)
   (let ((split-width-threshold nil))
-    (if zk-index-auto-scroll
+    (if octavo-index-auto-scroll
         (progn
-          (cond ((not (zk-file-p)))
-                (zk-index-view--kill
+          (cond ((not (octavo-file-p)))
+                (octavo-index-view--kill
                  (kill-buffer)
                  (other-window -1))
-                ((not zk-index-view--kill)
-                 (zk-index-view-mode)
+                ((not octavo-index-view--kill)
+                 (octavo-index-view-mode)
                  (other-window -1)))
           (forward-button 1)
           (hl-line-highlight)
           (unless (looking-at-p "[[:space:]]*$")
-            (zk-index-view-note)))
+            (octavo-index-view-note)))
       (forward-button 1))))
 
-(defun zk-index-previous-line ()
+(defun octavo-index-previous-line ()
   "Move to previous line.
-If `zk-index-auto-scroll' is non-nil, show note in other window."
+If `octavo-index-auto-scroll' is non-nil, show note in other window."
   (interactive)
   (let ((split-width-threshold nil))
-    (if zk-index-auto-scroll
+    (if octavo-index-auto-scroll
         (progn
-          (cond ((not (zk-file-p)))
-                (zk-index-view--kill
+          (cond ((not (octavo-file-p)))
+                (octavo-index-view--kill
                  (kill-buffer)
                  (other-window -1))
-                ((not zk-index-view--kill)
-                 (zk-index-view-mode)
+                ((not octavo-index-view--kill)
+                 (octavo-index-view-mode)
                  (other-window -1)))
           (forward-button -1)
           (hl-line-highlight)
           (unless (looking-at-p "[[:space:]]*$")
-            (zk-index-view-note)))
+            (octavo-index-view-note)))
       (forward-button -1))))
 
 ;;;###autoload
-(defun zk-index-switch-to-index ()
-  "Switch to ZK-Index buffer."
+(defun octavo-index-switch-to-index ()
+  "Switch to Octavo-Index buffer."
   (interactive)
-  (let ((buffer zk-index-buffer-name))
+  (let ((buffer octavo-index-buffer-name))
     (unless (get-buffer buffer)
       (progn
         (generate-new-buffer buffer)
-        (zk-index-refresh)))
+        (octavo-index-refresh)))
     (switch-to-buffer buffer)))
 
 
-(provide 'zk-index)
+(provide 'octavo-index)
 
-;;; zk-index.el ends here
+;;; octavo-index.el ends here

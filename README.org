@@ -2,7 +2,7 @@
 #+author: Richard Boyechko (based on Grant Rosson's excellent Zk)
 #+language: en
 
-[[https://melpa.org/#/zk][file:https://melpa.org/packages/zk-badge.svg]]
+[[https://melpa.org/#/zk][file:https://melpa.org/packages/octavo-badge.svg]]
 
 - [[#introduction][Introduction]]
 - [[#setup][Setup]]
@@ -98,7 +98,7 @@ minibuffer.
 
 The easiest way to install is from [[https://melpa.org/#/zk][MELPA]].
 
-Or, manually add =zk.el= to your loadpath and include =(require 'zk)= in your
+Or, manually add =octavo.el= to your loadpath and include =(require 'octavo)= in your
 init.el file.
 
 At a minimum, you must set the variables =octavo-directory= and
@@ -109,7 +109,7 @@ At a minimum, you must set the variables =octavo-directory= and
 (setq octavo-file-extension "md") ;; any plaintext file extension, eg, "org" or "txt"
 #+end_src
 
-Once =zk= is loaded, call =M-x octavo-new-note= to create a note or =M-x octavo-find-file= to
+Once =octavo= is loaded, call =M-x octavo-new-note= to create a note or =M-x octavo-find-file= to
 open an existing note.
 
 *** Additional Setup:
@@ -122,7 +122,7 @@ open an existing note.
 *** Sample setup with =use-package=
 
 #+begin_src emacs-lisp
-(use-package zk
+(use-package octavo
   :custom
   (octavo-directory "~/path/to/octavo-directory")
   (octavo-file-extension "md")
@@ -136,8 +136,8 @@ open an existing note.
 See [[#alternative-search-functions-using-consult-grep][Alternative Search Functions, using Consult-Grep]]
 
 #+begin_src emacs-lisp
-(use-package zk
-  :straight (zk :files (:defaults "octavo-consult.el"))
+(use-package octavo
+  :straight (octavo :files (:defaults "octavo-consult.el"))
   :custom
   (octavo-directory "~/path/to/octavo-directory")
   (octavo-file-extension "md")
@@ -199,7 +199,7 @@ can be disabled by setting =octavo-enable-link-buttons= to nil.
 *** Using Org-links with octavo-org-link.el
 
 The companion package =octavo-org-link.el= provides a custom Org-link type called
-=zk=, such that links will be styled =[[zk:201812101245]]= instead of
+=octavo=, such that links will be styled =[[octavo:201812101245]]= instead of
 =[[201812101245]]=. Using Org-links allows notes to be followed as expected,
 as well as exported to various formats via =org-export=, stored via
 =org-store-link=, and completed via =org-insert-link=.
@@ -212,12 +212,12 @@ To use org-links, include the following in your init.el:
 
  #+begin_src emacs-lisp
  (with-eval-after-load 'org
-   (with-eval-after-load 'zk
+   (with-eval-after-load 'octavo
      (require 'octavo-org-link)))
  #+end_src
 
-This will set create the =zk= Org-link type and set necessary values for
-several variables. Be sure to load =octavo-org-link.el= /after/ zk, as the above
+This will set create the =octavo= Org-link type and set necessary values for
+several variables. Be sure to load =octavo-org-link.el= /after/ octavo, as the above
 code snippet does.
 
 NOTE: =octavo-completion-at-point= functionality is not available when using
@@ -281,7 +281,7 @@ or an "inbox" note.
 By default, a link to the new note, along with the new note's title, will be
 placed at point wherever =octavo-new-note= was called. This behavior can be
 configured with the variable =octavo-new-note-link-insert=: when set to =t=, a
-link is always inserted; when set to =zk=, a link is inserted only when
+link is always inserted; when set to =octavo=, a link is inserted only when
 =octavo-new-note= is initiated inside an existing note in =octavo-directory=; when
 set to =ask=, the user is asked whether or not a link should be inserted;
 when set to =nil=, a link is not inserted. Calling =octavo-new-note= with a
@@ -431,7 +431,7 @@ interface by adding =octavo-consult-source= to list =consult-buffer-sources=.
 
 * Octavo-Index and Octavo-Desktop
 
-The package =octavo-index.el= is a companion to =zk= that offers two buffer-based
+The package =octavo-index.el= is a companion to =octavo= that offers two buffer-based
 interfaces for working with notes in your octavo-directory.
 
 For a video demonstration, see: https://youtu.be/7qNT87dphiA
@@ -444,7 +444,7 @@ Sample setup with =use-package=:
 
 #+begin_src emacs-lisp
 (use-package octavo-index
-  :after zk
+  :after octavo
   :config
   (octavo-index-setup-embark))
 #+end_src

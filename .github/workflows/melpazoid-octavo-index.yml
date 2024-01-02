@@ -24,7 +24,7 @@ jobs:
       env:
         LOCAL_REPO: ${{ github.workspace }}
         # RECIPE is your recipe as written for MELPA:
-        RECIPE: (zk-index :repo "localauthor/zk" :fetcher github :files ("zk-index.el"))
+        RECIPE: (octavo-index :repo "boyechko/octavo" :fetcher github :files ("octavo-index.el"))
         # set this to false (or remove it) if the package isn't on MELPA:
         EXIST_OK: true
       run: echo $GITHUB_REF && make -C ~/melpazoid

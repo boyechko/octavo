@@ -1,4 +1,4 @@
-;;; octavo.el --- Functions for working with Zettelkasten-style linked notes -*- lexical-binding: t; -*-
+;;; octavo.el --- Interface for Zettelkasten-style linked notes -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2023-2024 Richard Boyechko
 
