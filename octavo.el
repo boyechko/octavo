@@ -679,54 +679,41 @@ the starting position of the button."
                                       base-name))))
 
 ;;;###autoload
-(defun octavo-new-note (&optional title)
-  "Create a new note, insert link at point of creation.
-Optional TITLE argument."
-  (interactive)
-  (let* ((pref-arg current-prefix-arg)
-         (new-id (octavo--generate-id))
-         (orig-id (ignore-errors (octavo--file-id buffer-file-name)))
+(defun octavo-new-note (&optional title arg)
+  "Create a new note with TITLE.
+See `octavo-new-note-link-insert' to configure whether and
+how a link to the created note is inserted, and how
+\\[universal-argument] (ARG) modifies that behavior."
+  (interactive "sNote title: \np")
+  (let* ((new-id (octavo--generate-id))
+         (parent-id (or (ignore-errors (octavo--file-id buffer-file-name))
+                        octavo-default-backlink))
          (text (when (use-region-p)
-                 (buffer-substring
-                  (region-beginning)
-                  (region-end))))
+                 (prog1 (buffer-substring (region-beginning) (region-end))
+                   (kill-region (region-beginning) (region-end)))))
+         (lines (split-string text "[\n\r]+"))
          (title (cond (title title)
-                      ((use-region-p)
-                       (with-temp-buffer
-                         (insert text)
-                         (goto-char (point-min))
-                         (buffer-substring
-                          (point)
-                          (line-end-position))))
+                      (lines (car lines))
                       (t (read-string "Note title: "))))
-         (body (when (use-region-p)
-                 (with-temp-buffer
-                   (insert text)
-                   (goto-char (point-min))
-                   (forward-line 2)
-                   (buffer-substring
-                    (point)
-                    (point-max)))))
-         (file-name (octavo--note-file-path new-id title)))
-    (unless orig-id
-      (setq orig-id octavo-default-backlink))
-    (when (use-region-p)
-      (kill-region (region-beginning) (region-end)))
-    (when (or pref-arg
+         (file-name (octavo--note-file-path new-id title))
+         (new-buf (find-file-noselect file-name)))
+    (when (or arg
               (eq octavo-new-note-link-insert 't)
               (and (eq octavo-new-note-link-insert 'octavo)
                    (octavo-file-p))
               (and (eq octavo-new-note-link-insert 'ask)
                    (y-or-n-p "Insert link at point? ")))
-      (unless buffer-read-only
+      (let ((inhibit-read-only t))
         (octavo-insert-link new-id title)))
     (when buffer-file-name
       (save-buffer))
-    (find-file file-name)
-    (funcall octavo-new-note-header-function title new-id orig-id)
-    (when body (insert body))
-    (when octavo-enable-link-buttons (octavo-make-link-buttons))
-    (save-buffer)))
+    (with-current-buffer new-buf
+      (funcall octavo-new-note-header-function title new-id parent-id)
+      (when lines
+        (apply 'insert (nthcdr 2 lines)))
+      (when octavo-enable-link-buttons (octavo-make-link-buttons))
+      (save-buffer))
+    (pop-to-buffer new-buf)))
 
 (defun octavo-new-note-header (title new-id &optional orig-id)
   "Insert header in new notes with args TITLE and NEW-ID.
