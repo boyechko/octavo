@@ -80,7 +80,7 @@
     octavo-current-notes
     octavo-links-in-note
     octavo-insert-link
-    octavo-copy-link-and-title
+    octavo-embark-save-reference
     octavo-backlinks
     octavo-unlinked-notes)
   "List of functions for which previews should be rendered."

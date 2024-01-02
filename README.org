@@ -122,13 +122,14 @@ open an existing note.
 *** Sample setup with =use-package=
 
 #+begin_src emacs-lisp
-(use-package octavo
-  :custom
-  (octavo-directory "~/path/to/octavo-directory")
-  (octavo-file-extension "md")
-  :config
-  (octavo-setup-auto-link-buttons)
-  (octavo-setup-embark))
+  (use-package octavo
+    :custom
+    (octavo-directory "~/path/to/octavo-directory")
+    (octavo-file-extension "md")
+    :config
+    (require 'octavo-embark)
+    (octavo-setup-auto-link-buttons)
+    (octavo-setup-embark))
 #+end_src
 
 *** Sample setup with =straight.el= to include optional =octavo-consult.el= functions
@@ -598,7 +599,7 @@ in the octavo-index buffer.
 
 Use =embark-select= to mark candidates, including octavo-links, items in
 octavo-index, and octavo-files in the minibuffer. These selected items can then be
-acted on via =embark-act-all=. For example, =octavo-copy-link-and-title= will add
+acted on via =embark-act-all=. For example, =octavo-embark-save-reference= will add
 to the kill-ring a nicely formatted list of links to the selected notes.
 Similarly, =octavo-insert-link= will insert a nicely formatted list of links into
 the appropriate buffer.

@@ -42,7 +42,7 @@
 (defvar octavo-id-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'octavo-follow-link-at-point)
-    (define-key map (kbd "k") #'octavo-copy-link-and-title)
+    (define-key map (kbd "k") #'octavo-embark-save-reference)
     (define-key map (kbd "s") #'octavo-search)
     map)
   "Keymap for Embark octavo-id at-point actions.")
@@ -51,14 +51,12 @@
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "i") #'octavo-insert-link)
     (define-key map (kbd "f") #'octavo-find-file)
-    (define-key map (kbd "k") #'octavo-copy-link-and-title)
+    (define-key map (kbd "k") #'octavo-embark-save-reference)
     map)
   "Keymap for Embark octavo-file minibuffer actions.")
 
-;;; Copy Link and Title
-
 ;;;###autoload
-(defun octavo-copy-link-and-title (file-or-id)
+(defun octavo-embark-save-reference (file-or-id)
   "Save link and title for FILE-OR-ID."
   (interactive (list (octavo-select-file "Copy link: ")))
   (let ((links (octavo--formatted-string file-or-id octavo-link-and-title-format)))
@@ -78,7 +76,7 @@
 Adds octavo-id as an Embark target, and adds `octavo-id-map' and
 `octavo-file-map' to `embark-keymap-alist'."
   (with-eval-after-load 'embark
-    (add-to-list 'embark-multitarget-actions 'octavo-copy-link-and-title)
+    (add-to-list 'embark-multitarget-actions 'octavo-embark-save-reference)
     (add-to-list 'embark-multitarget-actions 'octavo-insert-link)
     (add-to-list 'embark-target-finders 'octavo-embark-target-octavo-id-at-point)
     (add-to-list 'embark-keymap-alist '(octavo-id . octavo-id-map))

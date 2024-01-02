@@ -151,7 +151,7 @@ string appropriate for `octavo--format'."
   "Setup Embark integration for `octavo-index'."
   (with-eval-after-load 'embark
     (add-to-list 'embark-multitarget-actions 'octavo-index)
-    (add-to-list 'embark-multitarget-actions 'octavo-copy-link-and-title)
+    (add-to-list 'embark-multitarget-actions 'octavo-embark-save-reference)
     (add-to-list 'embark-multitarget-actions 'octavo-follow-link-at-point)
     (add-to-list 'embark-multitarget-actions 'octavo-index-insert-link)
     (add-to-list 'embark-multitarget-actions 'octavo-index-narrow)
