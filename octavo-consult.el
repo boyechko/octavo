@@ -111,8 +111,8 @@ Select TAG, with completion, from list of all tags in octavo notes."
           :narrow (?z . "octavo - current notes")
           :hidden n
           :category buffer
-          :history octavo-history
-          :state ,#'consult--buffer-state
+          :history 'octavo-file-history
+          :state 'consult--buffer-state
           :items ,(lambda ()
                     (remq nil
                         (mapcar
@@ -135,24 +135,24 @@ name of this function."
 
 ;;; Consult Select File with Preview
 
-(defun octavo-consult-select-file (&optional prompt list group sort)
-  "Wrapper around `consult--read' to select a octavo-file.
-Offers candidates from `octavo--directory-files', or from LIST when
-supplied. Can take a PROMPT argument."
-  (let* ((files (if list list
-                  (octavo--directory-files t)))
-         (prompt (if prompt prompt
-                   "Select File: ")))
+(defun octavo-consult-select-file (&optional prompt files group sort)
+  "Select an Octavo from FILES, offering the PROMPT.
+If FILES is not specified, get candidates from
+`octavo--directory-files'. GROUP is passed to
+`consult-read'. If SORT is non-nil, assume that FILES is a
+sorted list."
+  (let* ((files (or files (octavo--directory-files 'full)))
+         (prompt (or prompt "Select Octavo: ")))
     (consult--read
      files
      :prompt prompt
-     :sort (if sort nil t)
+     :sort (null sort)
      :require-match t
-     :group (or group 'octavo--group-function)
+     :group (or group 'octavo-group-function)
      :category 'octavo-file
      :state (consult--file-preview)
      :preview-key (octavo-consult--preview-functions)
-     :history 'octavo-history)))
+     :history 'octavo-file-history)))
 
 (defun octavo-consult--preview-functions ()
   "Set `consult-preview-key' for specified functions."

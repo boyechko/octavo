@@ -259,9 +259,6 @@ buttons will be automatically created when a note is opened."
 See `octavo-new-note' for details."
   :type 'string)
 
-(defvar octavo-file-history nil)
-(defvar octavo-search-history nil)
-
 ;;; Low-Level Functions
 
 (defun octavo--singleton-p (list)
@@ -509,6 +506,11 @@ If UNIQUE is non-nil, remove duplicate matches."
   "Return list of tags from all notes in Octavo directory.
 What counts as a tag depends on `octavo-tag-regexp'."
   (octavo--grep-match-list octavo-tag-regexp 'unique))
+
+(defvar octavo-file-history nil
+  "History variable of Octavos visited this session.")
+(defvar octavo-search-history
+  "History variable of search queries this session.")
 
 (defun octavo-select-file (&optional prompt files &rest args)
   "Call `octavo-select-file-function', passing PROMPT, FILES, and ARGS to it."
