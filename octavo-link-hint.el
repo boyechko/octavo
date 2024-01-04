@@ -116,7 +116,7 @@ Set pop-up frame parameters in 'link-hint-preview-frame-parameters'."
            (frame (selected-frame)))
       (if (get-file-buffer file)
           (setq link-hint-preview--kill-last nil)
-        (setq buffer (find-file-noselect file))
+        (setq buffer (octavo-find-file file 'noselect))
         (setq link-hint-preview--kill-last t))
       (display-buffer-pop-up-frame
        buffer

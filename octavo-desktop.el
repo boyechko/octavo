@@ -257,7 +257,7 @@ desktop."
          (file (concat octavo-desktop-directory "/" desktop)))
     (setq octavo-desktop-current
       (if (file-exists-p (expand-file-name file))
-          (find-file-noselect file)
+          (octavo-find-file file 'noselect)
         (generate-new-buffer desktop)))
     (with-current-buffer octavo-desktop-current
       (setq require-final-newline 'visit-save)
@@ -385,7 +385,7 @@ buttons and overlays."
   "Action taken when `octavo-desktop' button is pressed."
   (let* ((id (octavo-index--button-at-point-p))
          (file (octavo--parse-id 'file-path id))
-         (buffer (find-file-noselect file)))
+         (buffer (octavo-find-file file 'noselect))) ; TODO Why?!
     (funcall octavo-desktop-button-display-function file buffer)))
 
 (defun octavo-desktop-help-echo (win _obj pos)

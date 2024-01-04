@@ -304,7 +304,8 @@ represented by the button."
   ;; which should do the actual displaying. Maintaining this extra layer of
   ;; indirection allows adding other behavior in the future (e.g. keeping a
   ;; tally of all buttons pressed in a session).
-  (funcall octavo-index-display-buffer-function (find-file-noselect file)))
+  (funcall octavo-index-display-buffer-function
+           (octavo-find-file file 'noselect)))
 
 (defun octavo-index-narrowed-p (buf-name)
   "Return t when index is narrowed in buffer BUF-NAME."
@@ -554,7 +555,7 @@ between those positions, inclusive."
          (file (octavo--parse-id 'file-path id))
          (kill (unless (get-file-buffer file)
                  t))
-         (buffer (find-file-noselect file)))
+         (buffer (octavo-find-file file 'noselect)))
     (funcall octavo-index-display-buffer-function buffer)
     (setq-local octavo-index-view--kill kill)
     (octavo-index-view-mode)))

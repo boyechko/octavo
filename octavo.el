@@ -697,7 +697,7 @@ how a link to the created note is inserted, and how
                       (lines (car lines))
                       (t (read-string "Note title: "))))
          (file-name (octavo--note-file-path new-id title))
-         (new-buf (find-file-noselect file-name)))
+         (new-buf (octavo-find-file file-name 'noselect)))
     (when (or arg
               (eq octavo-new-note-link-insert 't)
               (and (eq octavo-new-note-link-insert 'octavo)
@@ -771,20 +771,26 @@ title."
 ;;;=============================================================================
 
 ;;;###autoload
-(defun octavo-find-file (file &optional other-window)
+(defun octavo-find-file (file &optional variant)
   "Find FILE in `octavo-directory'.
-If OTHER-WINDOW is non-nil (or command is executed with
-\\[universal-argument]), find file in other window."
+VARIANT can be `other-window or `noselect, corresponding to
+`file-file-other-window` and `find-file-noselect`
+respectively. Return the resulting buffer.
+
+If executed as a command with \\[universal-argument],
+VARIANT is set to `other-window."
   (interactive
-   (list (octavo-select-file "Find file: ")))
-  (if other-window
-      (find-file-other-window file)
-    (find-file file)))
+   (list (octavo-select-file "Find file: ")
+         current-prefix-arg))
+  (pcase variant
+    ('noselect (find-file-noselect file))
+    ('other-window (find-file-other-window file))
+    (_ (find-file file))))
 
 ;;;###autoload
 (defun octavo-find-file-by-id (id)
   "Find file associated with ID."
-  (find-file (octavo--parse-id 'file-path id)))
+  (octavo-find-file (octavo--parse-id 'file-path id)))
 
 ;;;###autoload
 (defun octavo-find-file-by-full-text-search (regexp)
@@ -817,7 +823,7 @@ Optionally call a custom function by setting the variable
   (let ((id (or (octavo--id-at-point)
                 id)))
     (if id
-        (find-file (octavo--parse-id 'file-path id))
+        (octavo-find-file (octavo--parse-id 'file-path id))
       (error "No octavo-link at point"))))
 
 (defun octavo--links-in-note-list ()
@@ -843,7 +849,7 @@ Optionally call a custom function by setting the variable
   (interactive)
   (let* ((files (ignore-errors (octavo--links-in-note-list))))
     (if files
-        (find-file (octavo-select-file "Links: " files))
+        (octavo-find-file (octavo-select-file "Links: " filesn))
       (user-error "No links found"))))
 
 ;;;=============================================================================
