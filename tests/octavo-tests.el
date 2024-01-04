@@ -1,4 +1,4 @@
-;;; octavo-test.el --- Unit tests for octavo.el -*- lexical-binding: t; -*-
+;;; octavo-tests.el --- Unit tests for octavo.el -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2022 Richard Boyechko
 
@@ -42,7 +42,7 @@
  '(octavo-index-format "%t [[%i]]")
  '(octavo-directory-recursive t))
 
-(defvar octavo-test-environments
+(defvar octavo-tests-environments
   '((:many-in-subdirs
      (octavo-directory "~/.emacs.d/straight/repos/octavo/tests/sandbox/many-in-subdirs")
      (octavo-id-regexp "\\([0-9]\\{12\\}\\)")
@@ -76,7 +76,7 @@
   "Description of my testing environments.
 Each item has the form of (:name varlist)")
 
-(defvar octavo-test-sample-files
+(defvar octavo-tests-sample-files
   '((:standard
      "202206052002 {Event} WaterBear Film Screening Series at Minim.txt")
     (:tempus
@@ -92,47 +92,47 @@ The form is (:ENVIRONMENT SAMPLE1 [... SAMPLEN]).")
 ;;; Helper Functions
 ;;;=============================================================================
 
-(defun octavo-test-sample-files-for (env &optional full-path)
+(defun octavo-tests-sample-files-for (env &optional full-path)
   "Return a sample file for the given ENV'ironment.
 If FULL-PATH is non-nil, return full paths."
   (let ((dir (alist-get 'octavo-directory
                         (alist-get
                          env
-                         octavo-test-environments))))
+                         octavo-tests-environments))))
     (mapcar (if full-path
                 (lambda (f)
                   (expand-file-name f dir))
               #'identity)
-            (alist-get env octavo-test-sample-files))))
+            (alist-get env octavo-tests-sample-files))))
 
-(defmacro with-octavo-test-environment (env varlist &rest body)
+(defmacro with-octavo-tests-environment (env varlist &rest body)
   "Evaluate BODY inside a `let` form binding ENV's varlist.
 Additional variables can be defined in VARLIST"
   (declare (indent 2))
-  `(let (,@(alist-get env octavo-test-environments)
+  `(let (,@(alist-get env octavo-tests-environments)
          ,@varlist)
      ,@body))
 
-(defun octavo-test-set-environment (env)
+(defun octavo-tests-set-environment (env)
   "Set the variables needed to work wiht environment ENV."
   (interactive
-   (list (completing-read "Which environment? " octavo-test-environments)))
-  (apply #'custom-set-variables (alist-get (intern-soft env) octavo-test-environments)))
+   (list (completing-read "Which environment? " octavo-tests-environments)))
+  (apply #'custom-set-variables (alist-get (intern-soft env) octavo-tests-environments)))
 
-(ert-deftest with-octavo-test-environment ()
+(ert-deftest with-octavo-tests-environment ()
   :tags '(:disabled)
-  (with-octavo-test-environment :many-in-subdirs
+  (with-octavo-tests-environment :many-in-subdirs
     ((octavo-subdirectory-function nil))
     (should-not octavo-subdirectory-function)
     (should (string= octavo-directory
                      (cadr
-                      (cl-find 'octavo-directory (alist-get :many-in-subdirs octavo-test-environments)
+                      (cl-find 'octavo-directory (alist-get :many-in-subdirs octavo-tests-environments)
                                :key #'car :test #'eq))))
     (should (string=
-             (car (octavo-test-sample-files-for :standard))
+             (car (octavo-tests-sample-files-for :standard))
              "202206052002 {Event} WaterBear Film Screening Series at Minim.txt"))))
 
-(ert-deftest octavo-test-reload-octavo ()
+(ert-deftest octavo-tests-reload-octavo ()
   (load-file (straight--repos-file "octavo" "octavo.el"))
   (load-file (straight--repos-file "octavo" "octavo-index.el")))
 
@@ -141,10 +141,10 @@ Additional variables can be defined in VARLIST"
 ;;;=============================================================================
 
 (ert-deftest octavo--file-id ()
-  (with-octavo-test-environment :tempus ()
+  (with-octavo-tests-environment :tempus ()
     (with-current-buffer "tests-octavo.el"
       (should-not (octavo--file-id buffer-file-name)))
-    (let* ((file (car (octavo-test-sample-files-for :tempus))))
+    (let* ((file (car (octavo-tests-sample-files-for :tempus))))
       (should (string= (octavo--file-id file) "20220812T2046")))))
 
 ;; FIXME: Update? Fix?
@@ -166,7 +166,7 @@ Additional variables can be defined in VARLIST"
 
 (ert-deftest octavo--grep-file-list ()
   :tags '(:disabled)                    ; after PR #41
-  (with-octavo-test-environment :standard ()
+  (with-octavo-tests-environment :standard ()
     (should (eq 144 (length (octavo--grep-file-list " single "))))
     (should (eq 42 (length (octavo--grep-file-list " double "))))
     (should (eq 180 (length (octavo--grep-file-list " \\(single\\|double\\) " nil))))
@@ -176,52 +176,52 @@ Additional variables can be defined in VARLIST"
 
 (ert-deftest octavo--directory-files ()
   (ezeka-octavo-hacks-mode -1)
-  (with-octavo-test-environment :standard ()
+  (with-octavo-tests-environment :standard ()
     (should (= 2243 (length (octavo--directory-files)))))
-  (with-octavo-test-environment :many-in-subdirs ()
+  (with-octavo-tests-environment :many-in-subdirs ()
     (should (= 2242 (length (octavo--directory-files)))))
   (ezeka-octavo-hacks-mode 1)
-  (with-octavo-test-environment :numerus ()
+  (with-octavo-tests-environment :numerus ()
     (should-not (= 0 (length (octavo--directory-files)))))
-  (with-octavo-test-environment :tempus ()
+  (with-octavo-tests-environment :tempus ()
     ;; requires changing (octavo-file-name-regexp)
     (should (= 0 (length (octavo--directory-files))))))
 
 (ert-deftest octavo--directory-files-w/-tempus-currens ()
   :tags '(:disabled)                    ; needs implementing
-  (with-octavo-test-environment :tempus ()
+  (with-octavo-tests-environment :tempus ()
     (should-not (= 0 (length (octavo--directory-files))))))
 
 (ert-deftest octavo--wildcard-file-path ()
   :tags '(:disabled)                    ; pull request
-  (with-octavo-test-environment :numerus ()
+  (with-octavo-tests-environment :numerus ()
     (should (string= "/Users/richard/Zettelkasten/numerus/a/a-0000 {κ} Central Index."
                      (octavo--wildcard-file-path "a-0000"))))
-  (with-octavo-test-environment :tempus ()
+  (with-octavo-tests-environment :tempus ()
     (should (string= "/Users/richard/Zettelkasten/tempus/2022/20221025T2032.txt"
                      (octavo--wildcard-file-path "20221025T2032")))))
 
 (ert-deftest octavo--note-file-path ()
   :tags '(:disabled)
-  (with-octavo-test-environment :many-in-subdirs
+  (with-octavo-tests-environment :many-in-subdirs
     ((octavo-subdirectory-function nil))
     (should (string=
-             (car (octavo-test-sample-files-for :standard t))
+             (car (octavo-tests-sample-files-for :standard t))
              (octavo--note-file-path "202111102331"
                                  "{Event} WaterBear Film Screening Series at Minim")))))
 
 (ert-deftest octavo-subdirectory-function ()
-  (with-octavo-test-environment :many-in-subdirs
+  (with-octavo-tests-environment :many-in-subdirs
     ((octavo-subdirectory-function (lambda (id) (cl-subseq id 0 4)))
-     (file (car (octavo-test-sample-files-for :many-in-subdirs))))
+     (file (car (octavo-tests-sample-files-for :many-in-subdirs))))
     ;; FIXME: Rewrite using FILE
     (should (string=
              "~/Octavo/many-in-subdirs/2020/20200101T0101 Title of note.txt"
              (octavo--note-file-path "20200101T0101" "Title of note")))))
 
 (ert-deftest octavo--parse-file ()
-  (with-octavo-test-environment :standard
-    ((file (car (octavo-test-sample-files-for :standard))))
+  (with-octavo-tests-environment :standard
+    ((file (car (octavo-tests-sample-files-for :standard))))
     (should (string= (octavo--parse-file 'id file) "202206052002"))
     (should (string= (octavo--parse-file 'title file)
                      "{Event} WaterBear Film Screening Series at Minim"))
@@ -233,8 +233,8 @@ Additional variables can be defined in VARLIST"
   (let ((orig-a (symbol-function 'octavo--file-name-id))
         (orig-b (symbol-function 'octavo--file-name-title)))
     (unwind-protect
-        (with-octavo-test-environment :standard
-          ((file (car (octavo-test-sample-files-for :standard))))
+        (with-octavo-tests-environment :standard
+          ((file (car (octavo-tests-sample-files-for :standard))))
           (defalias 'octavo--file-name-id
             #'(lambda (_) "202206052002"))
           (defalias 'octavo--file-name-title
@@ -248,8 +248,8 @@ Additional variables can be defined in VARLIST"
 (ert-deftest octavo--parse-file ()
   "Test that `octavo--parse-file' behaves correctly when `octavo-id-regexp' changes."
   :tags '(:disabled)
-  (let ((file1 (octavo-test-sample-files-for :standard))
-        (file2 (octavo-test-sample-files-for :tempus))
+  (let ((file1 (octavo-tests-sample-files-for :standard))
+        (file2 (octavo-tests-sample-files-for :tempus))
         (octavo-id-regexp "\\([0-9]\\{12\\}\\)"))
     (should (string= (octavo--parse-file 'id file1) "202206052002"))
     (should (string= (octavo--parse-file 'id file2) nil))
@@ -260,8 +260,8 @@ Additional variables can be defined in VARLIST"
 (ert-deftest octavo-file-p ()
   "Test that `octavo-file-p' catches non-octavo files."
   :tags '(:disabled)
-  (let ((file1 (car (octavo-test-sample-files-for :standard)))
-        (file2 (car (octavo-test-sample-files-for :tempus)))
+  (let ((file1 (car (octavo-tests-sample-files-for :standard)))
+        (file2 (car (octavo-tests-sample-files-for :tempus)))
         (octavo-id-regexp "\\([0-9]\\{12\\}\\)"))
     (should (octavo-file-p file1))
     (should (string= (match-string 1 file1) "202111102331"))
@@ -279,7 +279,7 @@ Additional variables can be defined in VARLIST"
 
 (ert-deftest octavo--singleton-p ()
   :tags '(:benchmark :disabled)
-  (with-octavo-test-environment :standard
+  (with-octavo-tests-environment :standard
     ((files (octavo--directory-files)))
     (should (octavo--singleton-p '(1)))
     (should-not (octavo--singleton-p '()))
@@ -313,7 +313,7 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
     files))
 
 (ert-deftest octavo--processor ()
-  (with-octavo-test-environment :numerus ()
+  (with-octavo-tests-environment :numerus ()
     (should (equal (octavo--processor/gr "a-0000")
                    (octavo--processor "a-0000")))
     (should (equal (octavo--processor/gr '("a-0000" "c-4317"))
@@ -328,7 +328,7 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
 (ert-deftest octavo--alist ()
   "Make sure `octavo--alist' generates the correct structure."
   :tags '(:disabled)                    ; octavo-note
-  (with-octavo-test-environment :standard ()
+  (with-octavo-tests-environment :standard ()
     (let* ((alist (octavo--alist (octavo--directory-files)))
            (note (cdr (assoc "201004292342" alist))))
       (should (octavo--note-p note))
@@ -340,9 +340,9 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
 
 (ert-deftest bm/octavo--alist ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "octavo-test-reload-octavo")
+  (ert-run-tests-batch "octavo-tests-reload-octavo")
   (garbage-collect)
-  (with-octavo-test-environment :standard ()
+  (with-octavo-tests-environment :standard ()
     (should (benchmark-run 100 (octavo--alist)))
     (let ((files (octavo--directory-files)))
       (should (null (benchmark-run 100 (octavo--alist files)))))))
@@ -356,8 +356,8 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
 
 (ert-deftest bm/octavo--generate-id ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "octavo-test-reload-octavo")
-  (with-octavo-test-environment :standard ()
+  (ert-run-tests-batch "octavo-tests-reload-octavo")
+  (with-octavo-tests-environment :standard ()
     (should (null
              (benchmark-run 100
                (octavo--generate-id))))))
@@ -365,9 +365,9 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
 (ert-deftest bm/octavo--parse-id ()
   :tags '(:benchmark)
   ;;; 100 on :numerus with 3829 files (14.105008 24 2.713031)
-  (ert-run-tests-batch "octavo-test-reload-octavo")
+  (ert-run-tests-batch "octavo-tests-reload-octavo")
   (garbage-collect)
-  (with-octavo-test-environment :numerus ()
+  (with-octavo-tests-environment :numerus ()
     (should (null
              (benchmark-run 100
                (octavo--parse-id 'file-path "l-0614"))))))
@@ -375,9 +375,9 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
 (ert-deftest bm/octavo--wildcard-file-path ()
   :tags '(:benchmark)
   ;; 100 on :numerus with 3829 files (0.092291 0 0.0)
-  (ert-run-tests-batch "octavo-test-reload-octavo")
+  (ert-run-tests-batch "octavo-tests-reload-octavo")
   (garbage-collect)
-  (with-octavo-test-environment :numerus ()
+  (with-octavo-tests-environment :numerus ()
     (should (string= (octavo--wildcard-file-path "g-9172")
                      "/Users/richard/Zettelkasten/numerus/g/g-9172 {λ} size of a thought @Kuehn.txt"))
     (should (null
@@ -387,9 +387,9 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
 (ert-deftest bm/octavo-insert-link ()
   :tags '(:benchmark)
   ;;; 100 on :numerus with 4502 files
-  ;;(ert-run-tests-batch "octavo-test-reload-octavo")
+  ;;(ert-run-tests-batch "octavo-tests-reload-octavo")
   (garbage-collect)
-  (with-octavo-test-environment :numerus ()
+  (with-octavo-tests-environment :numerus ()
     (with-temp-buffer
       (should (null
                (benchmark-run 100
@@ -402,8 +402,8 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
   (elp-instrument-package "octavo")
   (fset 'five-completions
         (kmacro-lambda-form  0 "%d"))
-  (with-octavo-test-environment :standard
-    ((file (car (octavo-test-sample-files-for :standard)))
+  (with-octavo-tests-environment :standard
+    ((file (car (octavo-tests-sample-files-for :standard)))
      (five-completions [?\[ ?\[ ?m ?e ?m ?o tab tab return
                             ?\[ ?\[ ?t ?r ?p ?g tab return
                             ?\[ ?\[ ?w ?o ?m ?e ?n tab tab return
@@ -429,14 +429,14 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
 (ert-deftest bm/octavo-index ()
   :tags '(:benchmark)
   (elp-instrument-package "octavo")
-  (with-octavo-test-environment
+  (with-octavo-tests-environment
       :standard
       ((reps 10)
        (commit (or (ignore-errors
                      (string-trim
                       (shell-command-to-string "git rev-parse --short HEAD")))
                    (read-string "Commit: ")))
-       (file (car (octavo-test-sample-files-for :standard)))
+       (file (car (octavo-tests-sample-files-for :standard)))
        (time (format-time-string "%F %R"))
        (lines)
      (results))
@@ -464,8 +464,8 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
 ;;;=============================================================================
 
 (ert-deftest octavo--id-file ()
-  (with-octavo-test-environment :standard
-    ((file (car (octavo-test-sample-files-for :standard))))
+  (with-octavo-tests-environment :standard
+    ((file (car (octavo-tests-sample-files-for :standard))))
     (should (string= (file-name-base (octavo--id-file "202206052002"))
                      (file-name-base file)))))
 
@@ -474,8 +474,8 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
 ;;;=============================================================================
 
 (ert-deftest octavo--parse-id ()
-  (with-octavo-test-environment :standard
-    ((file (car (octavo-test-sample-files-for :standard))))
+  (with-octavo-tests-environment :standard
+    ((file (car (octavo-tests-sample-files-for :standard))))
     (should (string= (file-name-base (octavo--parse-id 'file-path "202206052002"))
                      (file-name-base file)))
     (should (string= (octavo--parse-id 'title "202206052002")
@@ -538,8 +538,8 @@ in an internal loop."
         return)))))
 
 (ert-deftest rb/octavo--parse-id ()
-  (with-octavo-test-environment :standard
-    ((file (car (octavo-test-sample-files-for :standard))))
+  (with-octavo-tests-environment :standard
+    ((file (car (octavo-tests-sample-files-for :standard))))
     (should (string= (file-name-base (rb/octavo--parse-id 'file-path "202206052002"))
                      (file-name-base file)))
     (should (string= (rb/octavo--parse-id 'title "202206052002")
@@ -548,9 +548,9 @@ in an internal loop."
 
 (ert-deftest benchmark/octavo--parse-id ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "octavo-test-reload-octavo")
+  (ert-run-tests-batch "octavo-tests-reload-octavo")
   (garbage-collect)
-  (with-octavo-test-environment :standard ()
+  (with-octavo-tests-environment :standard ()
     (should (benchmark-run 100 (gr/octavo--parse-id 'file-path "202206052002")))
     (should (benchmark-run 100 (octavo--parse-id 'file-path "202206052002")))))
 
@@ -559,7 +559,7 @@ in an internal loop."
 ;;;=============================================================================
 
 (ert-deftest octavo-index-query-files ()
-  (with-octavo-test-environment :numerus ()
+  (with-octavo-tests-environment :numerus ()
     (switch-to-buffer octavo-index-buffer-name)
     (octavo-index-refresh)
     (should (= 14 (length (octavo-index-query-files "humor" 'octavo-index-focus))))
@@ -568,8 +568,8 @@ in an internal loop."
 
 (ert-deftest benchmark/octavo-index-query-files ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "octavo-test-reload-octavo")
-  (with-octavo-test-environment :numerus ()
+  (ert-run-tests-batch "octavo-tests-reload-octavo")
+  (with-octavo-tests-environment :numerus ()
     (switch-to-buffer octavo-index-buffer-name)
     (should (benchmark-run 10           ; (26.718512 80 9.696325000000002)
               (octavo-index-refresh)
@@ -582,8 +582,8 @@ in an internal loop."
 
 (ert-deftest benchmark/rb/octavo-index-query-files ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "octavo-test-reload-octavo")
-  (with-octavo-test-environment :numerus ()
+  (ert-run-tests-batch "octavo-tests-reload-octavo")
+  (with-octavo-tests-environment :numerus ()
     (switch-to-buffer octavo-index-buffer-name)
     (should (benchmark-run 10           ; (21.83563 70 9.479023999999995)
               (octavo-index-refresh)
@@ -620,7 +620,7 @@ in an internal loop."
     (should (benchmark 10000 (octavo--posix-regexp all)))))
 
 (ert-deftest octavo--grep-commands ()
-  (with-octavo-test-environment :scriptum ()
+  (with-octavo-tests-environment :scriptum ()
     (should (= 13 (length (octavo--grep-id-list "Taiwan"))))
     (should (= 13 (length (octavo--grep-file-list "Taiwan"))))
     (should (= 13 (length (octavo--grep-file-list "Taiwan"))))
@@ -629,7 +629,7 @@ in an internal loop."
     ;; tags
     (should (equal '("#1" "#2" "#3" "#diss" "#metro2033" "#split" "#todo" "#102")
                    (octavo--grep-tag-list))))
-  (with-octavo-test-environment :numerus ()
+  (with-octavo-tests-environment :numerus ()
     (should (= (length (octavo--backlinks-list "t-7019")) 13)) ; Yomi Braester [[t-7019]]
     (should (= (length (octavo--backlinks-list "y-7690")) 1)))) ; Lee Yu-lin [[y-7690]]
 
@@ -656,7 +656,7 @@ an internal loop."
 
 (ert-deftest octavo--id-list ()
   :tags '()
-  (with-octavo-test-environment :tempus ()
+  (with-octavo-tests-environment :tempus ()
     (should (= (length (octavo--id-list)) (length (octavo--id-list/orig)))) ; no args
     (should (= (length (octavo--id-list "yomi")) (length (octavo--id-list/orig "yomi")))) ; str
     (let ((octavo-alist (octavo--alist)))
@@ -668,7 +668,7 @@ an internal loop."
                  (length (octavo--id-list/orig "^2014" octavo-alist))))
       )))
 
-(defmacro octavo-test-benchmark-run (n description &rest forms)
+(defmacro octavo-tests-benchmark-run (n description &rest forms)
   "Call `benchmark-run' on FORMS with N reptitions, and formatted string.
 The return consists of DESCRIPTION and return of
 `benchmark-run'; if DESCRIPTION is nil, use FORMS."
@@ -686,19 +686,19 @@ The return consists of DESCRIPTION and return of
 
 (ert-deftest bm/octavo--id-list+search-ids ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "octavo-test-reload-octavo")
+  (ert-run-tests-batch "octavo-tests-reload-octavo")
   (garbage-collect)
   (let ((n 10)
         results)
     (unwind-protect
-        (with-octavo-test-environment :tempus ()
-          (push (octavo-test-benchmark-run n nil (octavo--id-list/orig)) results)
-          (push (octavo-test-benchmark-run n nil (octavo--id-list)) results)
+        (with-octavo-tests-environment :tempus ()
+          (push (octavo-tests-benchmark-run n nil (octavo--id-list/orig)) results)
+          (push (octavo-tests-benchmark-run n nil (octavo--id-list)) results)
           (let ((octavo-alist (octavo--alist)))
-            (push (octavo-test-benchmark-run n nil (octavo--id-list/orig nil octavo-alist)) results)
-            (push (octavo-test-benchmark-run n nil (octavo--id-list nil octavo-alist)) results)
-            (push (octavo-test-benchmark-run n nil (octavo--id-list/orig "yomi" octavo-alist)) results)
-            (push (octavo-test-benchmark-run n nil (octavo--id-list "yomi" octavo-alist)) results)))
+            (push (octavo-tests-benchmark-run n nil (octavo--id-list/orig nil octavo-alist)) results)
+            (push (octavo-tests-benchmark-run n nil (octavo--id-list nil octavo-alist)) results)
+            (push (octavo-tests-benchmark-run n nil (octavo--id-list/orig "yomi" octavo-alist)) results)
+            (push (octavo-tests-benchmark-run n nil (octavo--id-list "yomi" octavo-alist)) results)))
       (with-current-buffer (get-buffer-create "*ERT Results*")
         (goto-char (point-max))
         (insert (format "\n\n=== %s (%d reps) at %s ===\n"
@@ -710,23 +710,23 @@ The return consists of DESCRIPTION and return of
 
 (ert-deftest bm/octavo--id-list+use-octavo-alist ()
   :tags '(:benchmark)
-  (ert-run-tests-batch "octavo-test-reload-octavo")
+  (ert-run-tests-batch "octavo-tests-reload-octavo")
   (garbage-collect)
   (let ((n 10)
         results)
     (unwind-protect
-        (with-octavo-test-environment :tempus ()
-          (push (octavo-test-benchmark-run n nil (octavo--id-list/orig)) results)
-          (push (octavo-test-benchmark-run n nil (octavo--id-list)) results)
-          (push (octavo-test-benchmark-run n nil (octavo--id-list/orig "yomi")) results)
-          (push (octavo-test-benchmark-run n nil (octavo--id-list "yomi")) results)
-          (push (octavo-test-benchmark-run n nil (octavo--id-list/orig "^2014")) results)
-          (push (octavo-test-benchmark-run n nil (octavo--id-list "^2014")) results)
+        (with-octavo-tests-environment :tempus ()
+          (push (octavo-tests-benchmark-run n nil (octavo--id-list/orig)) results)
+          (push (octavo-tests-benchmark-run n nil (octavo--id-list)) results)
+          (push (octavo-tests-benchmark-run n nil (octavo--id-list/orig "yomi")) results)
+          (push (octavo-tests-benchmark-run n nil (octavo--id-list "yomi")) results)
+          (push (octavo-tests-benchmark-run n nil (octavo--id-list/orig "^2014")) results)
+          (push (octavo-tests-benchmark-run n nil (octavo--id-list "^2014")) results)
           (let ((octavo-alist (octavo--alist)))
-            (push (octavo-test-benchmark-run n nil (octavo--id-list/orig nil octavo-alist)) results)
-            (push (octavo-test-benchmark-run n nil (octavo--id-list nil octavo-alist)) results)
-            (push (octavo-test-benchmark-run n nil (octavo--id-list/orig "yomi" octavo-alist)) results)
-            (push (octavo-test-benchmark-run n nil (octavo--id-list "yomi" octavo-alist)) results)))
+            (push (octavo-tests-benchmark-run n nil (octavo--id-list/orig nil octavo-alist)) results)
+            (push (octavo-tests-benchmark-run n nil (octavo--id-list nil octavo-alist)) results)
+            (push (octavo-tests-benchmark-run n nil (octavo--id-list/orig "yomi" octavo-alist)) results)
+            (push (octavo-tests-benchmark-run n nil (octavo--id-list "yomi" octavo-alist)) results)))
       (with-current-buffer (get-buffer-create "*ERT Results*")
         (goto-char (point-max))
         (insert (format "\n\n=== %s (%d reps) at %s ===\n"
@@ -741,24 +741,10 @@ The return consists of DESCRIPTION and return of
 ;;;=============================================================================
 
 (ert-deftest octavo-index--current-id-list ()
-  (with-octavo-test-environment :numerus ()
+  (with-octavo-tests-environment :numerus ()
     (should (= 6 (length (octavo-index--current-id-list (get-buffer "*Octavo-Index: Numerus*") 0 275))))
     (should (= 6 (length (octavo-index--current-id-list (get-buffer "*Octavo-Index: Numerus*") 0 310))))
     (should (= 4592 (length (octavo-index--current-id-list (get-buffer "*Octavo-Index: Numerus*")))))))
 
-;;;=============================================================================
-;;; octavo--find-file and octavo-find-file-functions
-;;;=============================================================================
-
-(ert-deftest octavo-find-file-functions ()
-  (with-octavo-test-environment :numerus ()
-    (let* ((stack '())
-           (sample (car (octavo-test-sample-files-for :numerus 'full-path)))
-           (func (lambda (file)
-                   (push file stack))))
-      (add-to-list 'octavo-find-file-functions func)
-      (octavo--find-file sample)
-      (should (string= (car stack) sample)))))
-
-(provide 'test-octavo)
-;;; octavo-test.el ends here
+(provide 'octavo-tests)
+;;; octavo-tests.el ends here
