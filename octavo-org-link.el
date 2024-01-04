@@ -63,7 +63,7 @@
   "Follow an octavo ID."
   (let ((file (octavo--parse-id 'file-path id)))
     (if file
-        (find-file file)
+        (octavo-find-file file)
       (user-error "Could not find octavo-note with ID %s" id))))
 
 (defun octavo-org-link--export (link description format)

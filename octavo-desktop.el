@@ -379,7 +379,7 @@ buttons and overlays."
                       buffer
                       '((direction . bottom)
                         (window-height . 0.5))))
-    (find-file-other-window file)))
+    (octavo-find-file file 'other-window)))
 
 (defun octavo-desktop-button-action (_)
   "Action taken when `octavo-desktop' button is pressed."

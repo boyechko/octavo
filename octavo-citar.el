@@ -118,7 +118,7 @@ Must include \"${=key=}\"."
                                        :category octavo-file
                                        :items octavo-citar--get-notes
                                        :hasitems octavo-citar--has-notes
-                                       :open find-file
+                                       :open octavo-find-file
                                        :create octavo-citar--create-note
                                        :transform file-name-nondirectory))
 

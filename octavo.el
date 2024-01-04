@@ -771,14 +771,15 @@ title."
 ;;;=============================================================================
 
 ;;;###autoload
-(defun octavo-find-file (&optional other-window)
-  "Find file in `octavo-directory'.
+(defun octavo-find-file (file &optional other-window)
+  "Find FILE in `octavo-directory'.
 If OTHER-WINDOW is non-nil (or command is executed with
 \\[universal-argument]), find file in other window."
-  (interactive "p")
+  (interactive
+   (list (octavo-select-file "Find file: ")))
   (if other-window
-      (find-file-other-window (octavo-select-file "Find file in other window: "))
-    (find-file (octavo-select-file "Find file: "))))
+      (find-file-other-window file)
+    (find-file file)))
 
 ;;;###autoload
 (defun octavo-find-file-by-id (id)
@@ -792,7 +793,7 @@ If OTHER-WINDOW is non-nil (or command is executed with
    (list (read-string "Search string: " nil 'octavo-search-history)))
   (let ((files (octavo--grep-file-list regexp)))
     (if files
-        (find-file
+        (octavo-find-file
          (octavo-select-file (format "Files containing \"%s\": " regexp) files))
       (user-error "No results for \"%s\"" regexp))))
 
@@ -804,7 +805,7 @@ Optionally call a custom function by setting the variable
   (interactive)
   (if octavo-current-notes-function
       (funcall octavo-current-notes-function)
-    (find-file
+    (octavo-find-file
      (octavo-select-file "Current Notes:" (octavo--current-notes-list)))))
 
 ;;; Follow Links
@@ -940,7 +941,7 @@ brackets \"[[\" initiates completion."
   (let* ((id (octavo--file-id buffer-file-name))
          (files (octavo--backlinks-list id)))
     (if files
-        (find-file (octavo-select-file "Backlinks: " files))
+        (octavo-find-file (octavo-select-file "Backlinks: " files))
       (user-error "No backlinks found"))))
 
 ;;;=============================================================================
@@ -1035,7 +1036,7 @@ Select TAG, with completion, from list of all tags in Octavo notes."
   (let* ((ids (octavo--unlinked-notes-list))
          (notes (mapcar (lambda (id) (octavo--parse-id 'file-path id)) ids)))
     (if notes
-        (find-file (octavo-select-file "Unlinked notes: " notes))
+        (octavo-find-file (octavo-select-file "Unlinked notes: " notes))
       (user-error "No unlinked notes found"))))
 
 ;;;=============================================================================
@@ -1059,10 +1060,10 @@ Backlinks and Links-in-Note are grouped separately."
             (push (propertize (abbreviate-file-name file) 'type 'link) resources))
           (dolist (file backlinks)
             (push (propertize file 'type 'backlink) resources))
-          (find-file (octavo-select-file "Links: "
-                                         resources
-                                         'octavo--network-group-function
-                                         'identity)))
+          (octavo-find-file (octavo-select-file "Links: "
+                                                resources
+                                                'octavo--network-group-function
+                                                'identity)))
       (user-error "No links found"))))
 
 (defun octavo--network-group-function (file transform)
