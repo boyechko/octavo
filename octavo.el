@@ -517,8 +517,7 @@ Offers candidates from list of FILES, if supplied, or from
 `octavo--directory-files'. INITIAL-INPUT, GROUP and SORT are
 passed to `completion-read'."
   (let* ((files (or files (octavo--directory-files 'full)))
-         (group (or group 'octavo--group-function))
-         (sort (or sort nil)))
+         (group (or group 'octavo--group-function)))
     (completing-read (or prompt "Select Zettel: ")
                      (lambda (string predicate action)
                        (if (eq action 'metadata)
@@ -790,12 +789,11 @@ If OTHER-WINDOW is non-nil (or command is executed with
 (defun octavo-find-file-by-full-text-search (regexp)
   "Find files containing REGEXP."
   (interactive
-   (list (read-string "Search string: "
-                      nil 'octavo-search-history)))
+   (list (read-string "Search string: " nil 'octavo-search-history)))
   (let ((files (octavo--grep-file-list regexp)))
     (if files
-        (find-file (octavo-select-file
-                    (format "Files containing \"%s\": " regexp) files))
+        (find-file
+         (octavo-select-file (format "Files containing \"%s\": " regexp) files))
       (user-error "No results for \"%s\"" regexp))))
 
 ;;;###autoload
