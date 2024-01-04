@@ -158,7 +158,9 @@ insertion. See `octavo-new-note-header' for an example."
 
 (defcustom octavo-select-file-function #'octavo--select-file
   "Function `octavo-select-file' uses for selecting an Octavo file.
-Must take an optional prompt and a list of files. See also
+It should at least take custom PROMPT and list of FILES, in
+that order, but can also be called, with additional
+arguments GROUP, SORT, and INITIAL-INPUT. See also
 `octavo--select-file' for the default implementation."
   :type 'function)
 

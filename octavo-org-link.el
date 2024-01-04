@@ -97,7 +97,7 @@ This lets the user complete a link through the `org-insert-link'
 interface by first selecting the `octavo:' hyperlink type."
   (concat
    "octavo:"
-   (car (octavo--parse-file (octavo--select-file)))))
+   (car (octavo--parse-file (octavo-select-file)))))
 
 (defun octavo-org-link--help-echo (_win _obj pos)
   "Generate help-echo tooltip for `octavo:' Org links.
