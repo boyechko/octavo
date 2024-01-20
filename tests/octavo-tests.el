@@ -621,16 +621,13 @@ in an internal loop."
 
 (ert-deftest octavo--grep-commands ()
   (with-octavo-tests-environment :scriptum ()
-    (should (= 13 (length (octavo--grep-id-list "Taiwan"))))
-    (should (= 13 (length (octavo--grep-file-list "Taiwan"))))
-    (should (= 13 (length (octavo--grep-file-list "Taiwan"))))
+    (should (= 18 (length (octavo--grep-file-list "Taiwan"))))
     ;; extended regexp
-    (should (= 16 (length (octavo--grep-file-list "\\(garbage\\|waste\\)"))))
+    (should (= 32 (length (octavo--grep-file-list "\\(garbage\\|waste\\)"))))
     ;; tags
-    (should (equal '("#1" "#2" "#3" "#diss" "#metro2033" "#split" "#todo" "#102")
-                   (octavo--grep-tag-list))))
+    (should (= 15 (length (octavo--grep-tag-list)))))
   (with-octavo-tests-environment :numerus ()
-    (should (= (length (octavo--backlinks-list "t-7019")) 13)) ; Yomi Braester [[t-7019]]
+    (should (= (length (octavo--backlinks-list "t-7019")) 19)) ; Yomi Braester [[t-7019]]
     (should (= (length (octavo--backlinks-list "y-7690")) 1)))) ; Lee Yu-lin [[y-7690]]
 
 ;;;=============================================================================

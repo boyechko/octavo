@@ -452,32 +452,35 @@ regexp instead. See manual page `re_format(7)' for details."
         (replace-regexp-in-string "\\\\\\([(){}+|]\\)" "\\1" result)))
     result))
 
-(defun octavo--grep-command (regexp &rest other-options)
-  "Return a list of files containing REGEXP.
-Any remaining OTHER-OPTIONS should be strings that will be
-passed directly to `grep' command."
+(defun octavo--grep-command (regexp &optional directory other-options)
+  "Return a list of files in DIRECTORY containing REGEXP.
+If not given, DIRECTORY defaults to `octavo-directory'.
+OTHER-OPTIONS should be a list of strings that will be
+passed directly to `egrep' command."
   (split-string
    (shell-command-to-string
-    (mapconcat #'identity
-      (append (list "egrep"
-                    "--recursive"
-                    "--ignore-case"
-                    (concat "--include=\\*." octavo-file-extension)
-                    (concat "--regexp="
-                            (shell-quote-argument (octavo--posix-regexp regexp)))
-                      octavo-directory
-                      "2>/dev/null")
-                other-options)
-        " "))
-     "\n" 'omit-nulls "\s"))
+    (string-join
+     (append (list "egrep"
+                   "--recursive"
+                   "--ignore-case"
+                   (concat "--include=\\*." octavo-file-extension)
+                   (concat "--regexp="
+                           (shell-quote-argument (octavo--posix-regexp regexp)))
+                   (or directory octavo-directory)
+                   "2>/dev/null")
+             other-options)
+     " "))
+   "\n" 'omit-nulls "\s"))
 
-(defun octavo--grep-file-list (regexp &optional invert)
-  "Return a list of files containing REGEXP.
-If INVERT is non-nil, return list of files *not* matching."
+(defun octavo--grep-file-list (regexp &optional invert directory)
+  "Return a list of files in DIRECTORY containing REGEXP.
+If INVERT is non-nil, return list of files *not* matching.
+If not given, DIRECTORY defaults to `octavo-directory'."
   (octavo--grep-command regexp
-                    (if invert
-                        "--files-without-match"
-                      "--files-with-matches")))
+                        (or directory octavo-directory)
+                        (list (if invert
+                                  "--files-without-match"
+                                "--files-with-matches"))))
 
 (defun octavo--grep-id-list (regexp &optional invert)
   "Return a list of IDs for files containing REGEXP.
@@ -487,12 +490,13 @@ If INVERT is non-nil, return list of files *not* matching."
         (list ids)
       ids)))
 
-(defun octavo--grep-match-list (regexp &optional unique)
-  "Return list of matches for REGEXP from notes in `octavo-directory'.
+(defun octavo--grep-match-list (regexp &optional unique directory)
+  "Return list of matches for REGEXP from notes in DIRECTORY.
 If UNIQUE is non-nil, remove duplicate matches."
-  (let ((result (octavo--grep-command regexp
-                                  "--only-matching"
-                                  "--no-filename")))
+  (let* ((directory (or directory octavo-directory))
+         (result (octavo--grep-command regexp directory
+                                       '("--only-matching"
+                                         "--no-filename"))))
     (if unique
         (delete-dups result)
       result)))
