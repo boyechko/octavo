@@ -482,14 +482,6 @@ If not given, DIRECTORY defaults to `octavo-directory'."
                                   "--files-without-match"
                                 "--files-with-matches"))))
 
-(defun octavo--grep-id-list (regexp &optional invert)
-  "Return a list of IDs for files containing REGEXP.
-If INVERT is non-nil, return list of files *not* matching."
-  (let ((ids (mapcar #'octavo--file-id (octavo--grep-file-list regexp invert))))
-    (if (stringp ids)
-        (list ids)
-      ids)))
-
 (defun octavo--grep-match-list (regexp &optional unique directory)
   "Return list of matches for REGEXP from notes in DIRECTORY.
 If UNIQUE is non-nil, remove duplicate matches."

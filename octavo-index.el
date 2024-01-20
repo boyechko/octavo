@@ -138,9 +138,6 @@ string appropriate for `octavo--format'."
 (defvar octavo-index-query-terms nil)
 (defvar octavo-search-history)
 
-(declare-function octavo-file-p octavo)
-(declare-function octavo--grep-id-list octavo)
-
 ;;; Embark Integration
 
 (defvar embark-multitarget-actions)
@@ -362,7 +359,8 @@ QUERY-TYPE can be either `FOCUS (filename only) or
                   (octavo-index--current-id-list (buffer-name))))
          (matches (pcase query-type
                     ('focus (octavo--id-list regexp))
-                    ('search (octavo--grep-id-list regexp))
+                    ('search (mapcar #'octavo--file-id
+                                     (octavo--grep-file-list regexp)))
                     (_ (error "Unknown query type: `%s'" query-type))))
          (matches (if scope
                       (cl-intersection scope matches :test #'string=)
