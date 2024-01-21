@@ -98,7 +98,7 @@ string appropriate for `octavo--format'."
 
 ;;; Octavo-Index Major Mode Settings
 
-(defvar octavo-index-mode-line-orig nil
+(defvar octavo-index--mode-line-orig nil
   "Value of `mode-line-misc-info' at the start of mode.")
 
 (defvar octavo-index-mode-map
@@ -123,7 +123,7 @@ string appropriate for `octavo--format'."
 (define-derived-mode octavo-index-mode nil "Octavo-Index"
   "Mode for `octavo-index'.
 \\{octavo-index-mode-map}"
-  (setq octavo-index-mode-line-orig mode-line-misc-info)
+  (setq octavo-index--mode-line-orig mode-line-misc-info)
   (read-only-mode)
   (hl-line-mode)
   (make-local-variable 'show-paren-mode)
@@ -176,7 +176,7 @@ candidates. Alternatively, `embark-export' exports candidates to
 a new index."
   (let ((files (octavo--processor arg)))
     (octavo-index-refresh files)
-    (octavo-index--reset-mode-line)))
+    (octavo-index--query-reset)))
 
 ;;; Formatting
 
@@ -198,6 +198,24 @@ of filepaths. This is the default `octavo-index-format-function'."
                 (label . ,(octavo--format format id title)))
               output)))))
 
+;;; Low-Level Functions
+
+(defun octavo-index--set-mode-name (&optional string)
+  "Set mode name in Octavo Index buffer.
+If STRING is given, add it to the `mode-name', otherwise
+reset to \"Octavo-Index\"."
+  (setq-local mode-name
+              (if (stringp string)
+                  (concat mode-name string)
+                "Octavo-Index"))
+  (force-mode-line-update))
+
+(defun octavo-index--set-mode-line (string)
+  "Set `mode-line-misc-info' to STRING in Octavo Index buffer."
+  (when (eq major-mode 'octavo-index-mode)
+    (setq-local mode-line-misc-info string)
+    (force-mode-line-update)))
+
 ;;; Main Stack
 
 ;;;###autoload
@@ -209,10 +227,11 @@ buffer with that name."
   (let* ((buf-name (or buf-name octavo-index-buffer-name))
          ;; TODO Make ALL-FRAMES argument to `get-buffer-window' customizable?
          (win (get-buffer-window buf-name nil))) ; == check only current frame
-    (unless (get-buffer octavo-index-buffer-name)
-      (octavo-index-refresh nil nil nil buf-name))
     (if win
         (select-window win)
+      (octavo-index-refresh nil nil nil buf-name)
+      (with-current-buffer buf-name
+        (octavo-index-mode))
       (pop-to-buffer buf-name))))
 
 (defun octavo-index-refresh (&optional files format-fn sort-fn buf-name)
@@ -234,12 +253,10 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
       (let ((line (line-number-at-pos)))
         (setq-local truncate-lines t)
         (erase-buffer)
-        (octavo-index-mode)
-        (octavo-index--reset-mode-name)
         (octavo-index--populate-index files format-fn sort-fn)
         (goto-char (point-min))
         (unless (octavo-index-narrowed-p buf-name)
-          (octavo-index--reset-mode-line)
+          (octavo-index--query-reset)
           (goto-line line))))))
 
 (eval-and-compile
@@ -371,9 +388,7 @@ QUERY-TYPE can be either `FOCUS (filename only) or
       (let ((mode-line (octavo-index-query-mode-line query-type regexp)))
         (setq octavo-index-query-mode-line mode-line)
         (octavo-index--set-mode-line mode-line)
-        (octavo-index--reset-mode-name)))
-    (when (stringp files)
-      (setq files (list files)))
+        (octavo-index--set-mode-name)))
     (or files
         (user-error "No matches for \"%s\"" regexp))))
 
@@ -415,14 +430,9 @@ QUERY-TYPE is either 'focus or 'search, with query term REGEXP."
                        "\" | ")
             "\"]")))
 
-(defun octavo-index--set-mode-line (string)
-  "Add STRING to mode-line in `octavo-index-mode'."
-  (when (eq major-mode 'octavo-index-mode)
-    (setq-local mode-line-misc-info string)))
-
-(defun octavo-index--reset-mode-line ()
-  "Reset mode-line in `octavo-index-mode'."
-  (setq-local mode-line-misc-info octavo-index-mode-line-orig)
+(defun octavo-index--query-reset ()
+  "Reset query parameters in the current Octavo Index buffer."
+  (setq-local mode-line-misc-info octavo-index--mode-line-orig)
   (setq octavo-index-query-mode-line nil
         octavo-index-query-terms nil))
 
@@ -484,15 +494,6 @@ between those positions, inclusive."
                           (buffer-name))
         (octavo-index--set-mode-name " by size"))
     (user-error "Not in a Octavo-Index")))
-
-(defun octavo-index--set-mode-name (string)
-  "Add STRING to `mode-name' in `octavo-index-mode'."
-  (when (eq major-mode 'octavo-index-mode)
-    (setq mode-name (concat mode-name string))))
-
-(defun octavo-index--reset-mode-name ()
-  "Reset `mode-name' in `octavo-index-mode'."
-  (setq mode-name "Octavo-Index"))
 
 (defun octavo-index--current-file-list ()
   "Return list files in current index."
