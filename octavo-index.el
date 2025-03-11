@@ -341,10 +341,10 @@ represented by the button."
    (list (read-string "Search: " nil 'octavo-search-history)))
   (if (eq major-mode 'octavo-index-mode)
       (octavo-index-refresh (octavo-index-query-files regexp 'search)
-                        octavo-index-last-format-function
-                        octavo-index-last-sort-function
-                        (buffer-name))
-    (user-error "Not in a Octavo-Index")))
+                            octavo-index-last-format-function
+                            octavo-index-last-sort-function
+                            (buffer-name))
+    (user-error "Not in an Octavo-Index buffer")))
 
 ;;;; Index Focus
 ;; narrow index based on search of note titles (case sensitive)
@@ -400,8 +400,8 @@ QUERY-TYPE can be either `FOCUS (filename only) or
         (files (octavo-index--current-file-list)))
     (unless (stringp files)
       (octavo-index-refresh files
-                        nil
-                        octavo-index-last-sort-function)
+                            nil
+                            octavo-index-last-sort-function)
       (setq mode-name mode))))
 
 (defun octavo-index-query-mode-line (query-type regexp)
