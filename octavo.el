@@ -364,18 +364,8 @@ The ID is created using `octavo-id-time-string-format'."
   "Return a list of Octavo IDs for notes in `octavo-directory'.
 If REGEXP is non-nil, only include notes whose IDs or titles
 match; ignore case. If OCTAVO-ALIST is non-nil, use it."
-  (if (or regexp octavo-alist)
-      (let ((octavo-alist (or octavo-alist (octavo--alist)))
-            (case-fold-search t)
-            (ids))
-        (dolist (item octavo-alist)
-          (if regexp
-              (when (or (string-match regexp (car item))
-                        (string-match regexp (cadr item)))
-                (push (car item) ids))
-            (push (car item) ids)))
-        ids)
-    (mapcar 'octavo--file-id (octavo--directory-files 'full))))
+  (mapcar #'octavo--file-id (octavo--directory-files nil regexp)))
+(make-obsolete 'octavo--id-list 'octavo--directory-files "v0.1")
 
 (defvar octavo--directory-files-cache nil
   "Store the result of `octavo--directory-files' to prevent re-scanning.
