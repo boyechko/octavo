@@ -31,37 +31,39 @@
 
 ;; This package offers several integrations of Consult with Octavo:
 
-;; 1. Two functions as alternatives to the default `octavo-grep' functions:
-;; `octavo-consult-grep' and `octavo-consult-grep-tag-search'. Instead of displaying
-;; search results in a `grep' buffer, these functions display search results
-;; using Consult.
+;; 1) Two functions as alternatives to the default `octavo-grep' functions:
+;;    `octavo-consult-grep' and `octavo-consult-grep-tag-search'. Instead of
+;;    displaying search results in a `grep' buffer, these functions display
+;;    search results using Consult.
 
-;;   To use these alternative functions, set one or both of the following variables:
-;;   (setq octavo-grep-function 'octavo-consult-grep)
-;;   (setq octavo-tag-grep-function 'octavo-consult-grep-tag-search)
+;;    To use these alternative functions, set one or both of the following
+;;    variables:
+;;    (setq octavo-grep-function 'octavo-consult-grep)
+;;    (setq octavo-tag-grep-function 'octavo-consult-grep-tag-search)
 
-;; 2. Two ways of accessing a list of currently open notes via `consult-buffer':
-;; first through `consult-buffer' itself, accessible via narrowing with the
-;; 'z' key; second, as alternative to the command `octavo-current-notes', such
-;; that it brings up the Consult buffer source directly.
+;; 2) Two ways of accessing a list of currently open notes via `consult-buffer':
+;;    first through `consult-buffer' itself, accessible via narrowing with the
+;;    'z' key; second, as alternative to the command `octavo-current-notes',
+;;    such that it brings up the Consult buffer source directly.
 
-;;   To add the Octavo Consult buffer source to `consult-buffer-sources', evaluate:
-;;   (add-to-list `consult-buffer-sources 'octavo-consult-source 'append)
+;;    To add the Octavo Consult buffer source to `consult-buffer-sources',
+;;    evaluate:
+;;    (add-to-list 'consult-buffer-sources 'octavo-consult-source 'append)
 
-;;   To set the alternative `octavo-current-note' function, evaluate:
-;;   (setq octavo-current-notes-function 'octavo-consult-current-notes)
+;;    To set the alternative `octavo-current-note' function, evaluate:
+;;    (setq octavo-current-notes-function 'octavo-consult-current-notes)
 
-;; 3. Note previews when selecting a Octavo file in the minibuffer.
+;; 3) Note previews when selecting a Octavo file in the minibuffer.
 
-;;   To implement note previews, evaluate:
-;;   (setq octavo-select-file-function 'octavo-consult-select-file)
+;;    To implement note previews, evaluate:
+;;    (setq octavo-select-file-function 'octavo-consult-select-file)
 
-;;   NOTE: The list of functions for which previews will be shown can be
-;;   customized by amending the functions listed in the variable
-;;   `octavo-consult-preview-functions'.
+;;    NOTE: The list of functions for which previews will be shown can be
+;;    customized by amending the functions listed in the variable
+;;    `octavo-consult-preview-functions'.
 
-;; To load this package, put `octavo-consult.el' into your load path, load Consult,
-;; and evaluate the following:
+;; To load this package, put `octavo-consult.el' into your load path, load
+;; Consult, and evaluate the following:
 
 ;; (with-eval-after-load 'consult
 ;;   (with-eval-after-load 'octavo
