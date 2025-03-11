@@ -395,31 +395,28 @@ DIRECTORY defaults to `octavo-directory'."
               octavo--directory-files-cache
               nil nil #'octavo--directory-files-cache-key-equal))
 
-(defun octavo--directory-files (&optional full regexp refresh)
+(defun octavo--directory-files (&optional full regexp _)
   "Return list of octavo-files in `octavo-directory'.
-Excludes lockfiles, autosave files, and backup files. When
-FULL is non-nil, return full file-paths. If REGEXP is non-nil,
-it must be a regexp to replace the default, `octavo-id-regexp'.
-With REFRESH, rescan the file system and update the cache.
+When FULL is non-nil, return full file-paths. Only files
+matching REGEXP (defaults to `octavo-file-name-regexp') are
+included. The REGEXP matches the entire non-directory part
+of each file name.
 
-When `octavo-directory-recursive' is non-nil, searches recursively in
-subdirectories of `octavo-directory' (except those matching
-`octavo-directory-recursive-ignore-dir-regexp') and returns full
-file-paths."
-  (let* ((regexp (or regexp octavo-id-regexp)))
+When `octavo-directory-recursive' is non-nil, search
+recursively in subdirectories of `octavo-directory' and
+return full file-paths."
+  (garbage-collect)
+  (let* ((regexp (or regexp (octavo-file-name-regexp)))
+         (files (if (not octavo-directory-recursive)
+                    (directory-files octavo-directory full regexp)
+                  (directory-files-recursively
+                   octavo-directory regexp nil
+                   (lambda (dir)
+                     (not (string-match
+                           octavo-directory-recursive-ignore-dir-regexp
+                           dir)))))))
     (garbage-collect)                   ; prevents eventual slowdown
-    (or (and (not refresh)
-             (octavo--directory-files-cached octavo-directory full regexp))
-        (setf (octavo--directory-files-cached octavo-directory full regexp)
-              (seq-filter #'octavo-file-p
-                          (if (not octavo-directory-recursive)
-                              (directory-files octavo-directory full regexp)
-                            (directory-files-recursively
-                             octavo-directory regexp nil
-                             (lambda (dir)
-                               (not (string-match
-                                     octavo-directory-recursive-ignore-dir-regexp
-                                     dir))))))))))
+    files))
 
 (defun octavo--current-notes-list ()
   "Return list of files for currently open notes."
