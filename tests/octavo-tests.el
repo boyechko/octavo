@@ -34,7 +34,6 @@
 
 (require 'ert)
 (require 'elp)
-(define-key emacs-lisp-mode-map (kbd "C-c C-e") 'ert)
 
 (custom-set-variables
  '(octavo-file-extension "txt")
