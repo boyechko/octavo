@@ -497,10 +497,15 @@ between those positions, inclusive."
     (user-error "Not in a Octavo-Index")))
 
 (defun octavo-index--current-file-list ()
-  "Return list files in current index."
-  (let* ((ids (octavo-index--current-id-list (buffer-name)))
-         (files (mapcar (lambda (id) (octavo--parse-id 'file-path id)) ids)))
-    (when files
+  "Return a list of files in the current Octavo-Index."
+  (save-excursion
+    (let (files
+          button)
+      (goto-char (point-min))
+      (while (and (setq button (forward-button 0 nil nil 'noerror))
+                  (zerop (forward-line)))
+        (when (eq (button-type button) 'octavo-index)
+          (push (button-get button 'button-data) files)))
       files)))
 
 (defun octavo-index--sort-created (files)
