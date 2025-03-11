@@ -371,6 +371,7 @@ buttons and overlays."
 
 ;;; Utilities
 
+;; TODO Why both args?
 (defun octavo-desktop-button-display-action (file buffer)
   "Function to display FILE or BUFFER on button press in Octavo-Desktop."
   (if (one-window-p)

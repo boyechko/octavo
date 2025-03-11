@@ -358,6 +358,8 @@ The ID is created using `octavo-id-time-string-format'."
       (setq id (number-to-string (1+ (string-to-number id)))))
     id))
 
+;; TODO Get rid of this function altogether, just relying on
+;; `octavo--directory-files' instead.
 (defun octavo--id-list (&optional regexp octavo-alist)
   "Return a list of Octavo IDs for notes in `octavo-directory'.
 If REGEXP is non-nil, only include notes whose IDs or titles
@@ -569,7 +571,7 @@ ARG can be a string (octavo-file or octavo-id) or a list of such strings."
             (if (octavo-file-p single-arg)
                 single-arg
               (octavo--parse-id 'file-path single-arg octavo-alist)))))
-    (cond ((stringp arg)                ; Single octavo-file or octavo-id as string
+    (cond ((stringp arg)             ; Single octavo-file or octavo-id as string
            (list (funcall process-single-arg arg)))
           ((listp arg)                  ; List of octavo-files or octavo-ids
            (mapcar process-single-arg arg))
@@ -790,7 +792,7 @@ VARIANT is set to `other-window."
 
 ;;;###autoload
 (defun octavo-find-file-by-full-text-search (regexp)
-  "Find files containing REGEXP."
+  "Find files containing REGEXP."       ; TODO Rename to select-xx
   (interactive
    (list (read-string "Search string: " nil 'octavo-search-history)))
   (let ((files (octavo--grep-file-list regexp)))
@@ -800,10 +802,10 @@ VARIANT is set to `other-window."
       (user-error "No results for \"%s\"" regexp))))
 
 ;;;###autoload
-(defun octavo-current-notes ()
+(defun octavo-current-notes ()          ; TODO Rename to octavo-select-from-current-notes?
   "Select from list of currently open notes.
-Optionally call a custom function by setting the variable
-`octavo-current-notes-function' to a function name."
+If `octavo-current-notes-function' is a function, call that
+instead."
   (interactive)
   (if octavo-current-notes-function
       (funcall octavo-current-notes-function)
@@ -843,17 +845,16 @@ Optionally call a custom function by setting the variable
 (defun octavo-links-in-note ()
   "Select from list of notes linked to in the current note."
   (interactive)
-  (let* ((files (ignore-errors (octavo--links-in-note-list))))
-    (if files
-        (octavo-find-file (octavo-select-file "Links: " filesn))
-      (user-error "No links found"))))
+  (if-let ((files (ignore-errors (octavo--links-in-note-list))))
+      (octavo-find-file (octavo-select-file "Links: " files))
+    (user-error "No links found")))
 
 ;;;=============================================================================
 ;;; Insert Link
 ;;;=============================================================================
 
 ;;;###autoload
-(defun octavo-insert-link (arg &optional title)
+(defun octavo-insert-link (arg &optional title) ; TODO Refactor
   "Insert link to note, from ARG.
 By default, only a link is inserted. With prefix-argument, both
 link and title are inserted. See variable `octavo-link-and-title'
@@ -992,7 +993,7 @@ Select TAG, with completion, from list of all tags in Octavo notes."
 
 ;;; Find Dead Links and Unlinked Notes
 (defun octavo--grep-link-id-list ()
-  "Return list of all ids that appear as links in `octavo-directory' files."
+  "Return list of IDs that are linked to in any Octavo file."
   (mapcar (lambda (link)
             (when (string-match octavo-id-regexp link)
               (match-string 0 link)))
