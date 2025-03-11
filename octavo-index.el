@@ -374,16 +374,16 @@ items listed first.")
 QUERY-TYPE can be either `FOCUS (filename only) or
 `SEARCH (full text)."
   (let* ((scope (when (octavo-index-narrowed-p (buffer-name))
-                  (octavo-index--current-id-list (buffer-name))))
-         (matches (pcase query-type
-                    ('focus (octavo--id-list regexp))
-                    ('search (mapcar #'octavo--file-id
-                                     (octavo--grep-file-list regexp)))
-                    (_ (error "Unknown query type: `%s'" query-type))))
-         (matches (if scope
-                      (cl-intersection scope matches :test #'string=)
-                    matches))
-         (files (mapcar (lambda (id) (octavo--parse-id 'file-path id)) matches)))
+                  (octavo-index--current-file-list)))
+         (files (pcase query-type
+                  ('focus (octavo--directory-files 'full regexp))
+                  ('search (octavo--grep-file-list regexp))
+                  (_ (error "Unknown query type: `%s'" query-type))))
+         (files (if (null scope)
+                    files
+                  (cl-intersection scope files
+                                   :test #'string=
+                                   :key #'octavo--file-id))))
     (add-to-history 'octavo-search-history regexp)
     (when files
       (let ((mode-line (octavo-index-query-mode-line query-type regexp)))
