@@ -232,8 +232,6 @@ buffer with that name."
     (if win
         (select-window win)
       (octavo-index-refresh nil nil nil buf-name)
-      (with-current-buffer buf-name
-        (octavo-index-mode))
       (pop-to-buffer buf-name))))
 
 (defun octavo-index-refresh (&optional files format-fn sort-fn buf-name)
@@ -285,6 +283,7 @@ and formatted with FORMAT-FN (or `octavo-index-format-function')."
                             'help-echo (when octavo-index-help-echo
                                          (octavo-index--help-echo .file .label)))
         (setq count (1+ count))))
+    (octavo-index-mode)
     (octavo-index--set-mode-name (format " [%d]" count))))
 
 (defun octavo-index--help-echo (file label)
