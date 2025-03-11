@@ -124,6 +124,7 @@ string appropriate for `octavo--format'."
   "Mode for `octavo-index'.
 \\{octavo-index-mode-map}"
   (setq octavo-index--mode-line-orig mode-line-misc-info)
+  (octavo-index--set-mode-name)
   (read-only-mode)
   (hl-line-mode)
   (make-local-variable 'show-paren-mode)
@@ -204,11 +205,12 @@ of filepaths. This is the default `octavo-index-format-function'."
   "Set mode name in Octavo Index buffer.
 If STRING is given, add it to the `mode-name', otherwise
 reset to \"Octavo-Index\"."
-  (setq-local mode-name
-              (if (stringp string)
-                  (concat mode-name string)
-                "Octavo-Index"))
-  (force-mode-line-update))
+  (when (eq major-mode 'octavo-index-mode)
+    (setq-local mode-name
+                (if (stringp string)
+                    (concat mode-name string)
+                  "Octavo-Index"))
+    (force-mode-line-update)))
 
 (defun octavo-index--set-mode-line (string)
   "Set `mode-line-misc-info' to STRING in Octavo Index buffer."
