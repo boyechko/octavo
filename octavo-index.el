@@ -242,8 +242,8 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
         (files (or files (octavo--directory-files 'full nil 'refresh)))
         (buf-name (or buf-name octavo-index-buffer-name)))
     (setq octavo-index-last-format-function format-fn
-          octavo-index-last-sort-function sort-fn
-          default-directory (expand-file-name octavo-directory))
+          octavo-index-last-sort-function sort-fn)
+    (setq-local default-directory (expand-file-name octavo-directory))
     (unless (get-buffer buf-name)
       (when octavo-default-backlink
         (unless (octavo-file-p)
