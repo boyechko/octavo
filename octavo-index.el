@@ -460,41 +460,33 @@ between those positions, inclusive."
 
 ;;; Index Sort Functions
 
-(defun octavo-index-sort-modified ()
-  "Sort index by last modified."
-  (interactive)
+(defun octavo-index--sort (sort-fn sort-name)
+  "Sort the index using SORT-FN and update mode name with SORT-NAME.
+SORT-FN is a function that takes a list of files and returns a sorted list.
+SORT-NAME is a string describing the sort type."
   (if (eq major-mode 'octavo-index-mode)
       (progn
         (octavo-index-refresh (octavo-index--current-file-list)
-                          octavo-index-last-format-function
-                          #'octavo-index--sort-modified
-                          (buffer-name))
-        (octavo-index--set-mode-name " by modified"))
+                              octavo-index-last-format-function
+                              sort-fn
+                              (buffer-name))
+        (octavo-index--set-mode-name (format " by %s" sort-name)))
     (user-error "Not in a Octavo-Index")))
+
+(defun octavo-index-sort-modified ()
+  "Sort index by last modified time."
+  (interactive)
+  (octavo-index--sort #'octavo-index--sort-modified "modified"))
 
 (defun octavo-index-sort-created ()
   "Sort index by date created."
   (interactive)
-  (if (eq major-mode 'octavo-index-mode)
-      (progn
-        (octavo-index-refresh (octavo-index--current-file-list)
-                          octavo-index-last-format-function
-                          #'octavo-index--sort-created
-                          (buffer-name))
-        (octavo-index--set-mode-name " by created"))
-    (user-error "Not in a Octavo-Index")))
+  (octavo-index--sort #'octavo-index--sort-created "created"))
 
 (defun octavo-index-sort-size ()
   "Sort index by size."
   (interactive)
-  (if (eq major-mode 'octavo-index-mode)
-      (progn
-        (octavo-index-refresh (octavo-index--current-file-list)
-                          octavo-index-last-format-function
-                          #'octavo-index--sort-size
-                          (buffer-name))
-        (octavo-index--set-mode-name " by size"))
-    (user-error "Not in a Octavo-Index")))
+  (octavo-index--sort #'octavo-index--sort-size "size"))
 
 (defun octavo-index--current-file-list ()
   "Return a list of files in the current Octavo-Index."
