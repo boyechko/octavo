@@ -500,39 +500,36 @@ SORT-NAME is a string describing the sort type."
           (push (button-get button 'button-data) files)))
       files)))
 
-(defun octavo-index--sort-created (files)
-  "Sort FILES in ascending alphabetical order by ID."
+(defun octavo-index--sort-files (files key-fn comparator-fn)
+  "Sort FILES based on a key function and comparator.
+KEY-FN is a function that computes the sorting key for each file.
+COMPARATOR-FN is a function that compares two keys."
   (let ((ht (make-hash-table :test #'equal :size 5000)))
-    (mapc (lambda (x)
-            (puthash x (car (octavo--parse-file x)) ht))
-          files)
+    (dolist (file files)
+      (puthash file (funcall key-fn file) ht))
     (sort files
           (lambda (a b)
-            (let ((one (gethash a ht))
-                  (two (gethash b ht)))
-              (string< two one))))))
+            (funcall comparator-fn (gethash a ht) (gethash b ht))))))
 
-(defun octavo-index--sort-modified (list)
-  "Sort LIST for latest modification."
-  (let ((ht (make-hash-table :test #'equal :size 5000)))
-    (dolist (x list)
-      (puthash x (file-attribute-modification-time (file-attributes x)) ht))
-    (sort list
-          (lambda (a b)
-            (let ((one
-                   (gethash a ht))
-                  (two
-                   (gethash b ht)))
-              (time-less-p two one))))))
+(defun octavo-index--sort-created (files)
+  "Sort FILES in ascending alphabetical order by ID."
+  (octavo-index--sort-files files
+                            (lambda (file) (car (octavo--parse-file file)))
+                            #'string<))
 
-(defun octavo-index--sort-size (list)
-  "Sort LIST for latest modification."
-  (sort list
-        (lambda (a b)
-          ;; `>' signals an error if it's passed a nil, but `file-attributes'
-          ;; can return nil the file does not exist (or when passed a nil).
-          (> (or (file-attribute-size (file-attributes a)) -1)
-             (or (file-attribute-size (file-attributes b)) -1)))))
+(defun octavo-index--sort-modified (files)
+  "Sort FILES for latest modification."
+  (octavo-index--sort-files files
+                            (lambda (file)
+                              (file-attribute-modification-time (file-attributes file)))
+                            #'time-less-p))
+
+(defun octavo-index--sort-size (files)
+  "Sort FILES by size."
+  (octavo-index--sort-files files
+                            (lambda (file)
+                              (file-attribute-size (file-attributes file)))
+                            #'>))
 
 ;;; Octavo-Index Keymap Commands
 
