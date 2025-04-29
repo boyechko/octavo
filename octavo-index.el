@@ -133,8 +133,6 @@ string appropriate for `octavo--format'."
 
 ;;; Declarations
 
-(defvar octavo-index-last-sort-function nil)
-(defvar octavo-index-last-format-function nil)
 (defvar octavo-index-query-mode-line nil)
 (defvar octavo-index-query-terms nil)
 (defvar octavo-search-history)
@@ -233,6 +231,11 @@ buffer with that name."
         (select-window win)
       (octavo-index-refresh nil nil nil buf-name)
       (pop-to-buffer buf-name))))
+
+(defvar octavo-index-last-sort-function nil
+  "The last-used sort function.")
+(defvar octavo-index-last-format-function nil
+  "The last-used format function.")
 
 (defun octavo-index-refresh (&optional files format-fn sort-fn buf-name)
   "Refresh the Octavo-Index.
