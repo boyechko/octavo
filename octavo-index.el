@@ -606,10 +606,14 @@ If DESCENDING is non-nil, sort in descending order."
 (defun octavo-index-current-notes ()
   "Open Octavo-Index listing currently open notes."
   (interactive)
-  (octavo-index
-   (octavo--current-notes-list)
-   octavo-index-last-format-function
-   octavo-index-last-sort-function))
+  (let ((buf-name "*Octavo-Index: Current*"))
+    (octavo-index-refresh
+     (octavo--current-notes-list)
+     octavo-index-last-format-function
+     octavo-index-last-sort-method
+     buf-name)
+    (switch-to-buffer buf-name)))
+
 (defun octavo-index--button-at-point (&optional pos)
   "Return the `octavo-index' button at point.
 Takes an option POS position argument."
