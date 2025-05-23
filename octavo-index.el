@@ -267,6 +267,9 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-METHOD, BUF-NAME."
 (eval-and-compile
   (define-button-type 'octavo-index
     'follow-link t
+    'id nil
+    'file nil
+    'title nil
     'button-data nil
     'action 'octavo-index--button-action
     'face 'default))
@@ -282,17 +285,21 @@ and formatted with FORMAT-FN (or `octavo-index-format-function')."
          (format-fn (or format-fn octavo-index-format-function))
          (candidates (nreverse (funcall format-fn (funcall sort-fn files))))
          (count 0))
-    (dolist (alist candidates)
-      (let-alist alist
-        (unless (zerop count) (insert "\n"))
-        (insert-text-button .label
-                            'type 'octavo-index
-                            'button-data .file
-                            'help-echo (when octavo-index-help-echo
-                                         (octavo-index--help-echo .file .label)))
-        (setq count (1+ count))))
     (setq octavo-index-last-format-function format-fn
           octavo-index-last-sort-method sort-method)
+    (dolist (cand candidates)
+      (let-alist cand
+        (let ((id-title (octavo--parse-file \.file)))
+          (unless (zerop count) (insert "\n"))
+          (insert-text-button \.label
+                              'type 'octavo-index
+                              'id (car id-title)
+                              'file \.file
+                              'title (cdr id-title)
+                              'button-data \.file
+                              'help-echo (when octavo-index-help-echo
+                                           (octavo-index--help-echo \.file (cdr id-title))))
+          (setq count (1+ count)))))
     (octavo-index-mode)
     (octavo-index--set-mode-name (format " [%d]" count))))
 
@@ -576,8 +583,8 @@ If DESCENDING is non-nil, sort in descending order."
   "View note in `octavo-index-view-mode'."
   (interactive)
   (beginning-of-line)
-  (let* ((id (octavo-index--button-at-point-p))
-         (file (octavo--parse-id 'file-path id))
+  (let* ((button (octavo-index--button-at-point))
+         (file (button-get button 'file))
          (kill (unless (get-file-buffer file)
                  t))
          (buffer (octavo-find-file file 'noselect)))
@@ -592,19 +599,24 @@ If DESCENDING is non-nil, sort in descending order."
    (octavo--current-notes-list)
    octavo-index-last-format-function
    octavo-index-last-sort-function))
+(defun octavo-index--button-at-point (&optional pos)
+  "Return the `octavo-index' button at point.
+Takes an option POS position argument."
+  (when-let* ((button (button-at (or pos (point))))
+              (_ (button-has-type-p button 'octavo-index)))
+    button))
 
-(defun octavo-index--button-at-point-p (&optional pos)
+(defun octavo-index--id-at-point (&optional pos)
   "Return octavo-ID when `octavo-index' button is at point.
 Takes an option POS position argument."
   (when-let* ((button (button-at (or pos (point))))
-              (_ (button-has-type-p button 'octavo-index))
-              (file (button-get button 'button-data)))
-    (ezeka-octavo-file-id file)))
+              (_ (button-has-type-p button 'octavo-index)))
+    (button-get button 'id)))
 
 (defun octavo-index-insert-link (&optional id)
   "Insert octavo-link in `other-window' for button ID at point."
-  (interactive (list (or (octavo--id-at-point)
-                         (octavo-index--button-at-point-p))))
+  (interactive (list (or (octavo-index--id-at-point)
+                         (octavo--id-at-point))))
   (cond ((derived-mode-p 'octavo-index-mode)
          (with-selected-window (other-window-for-scrolling)
            (octavo-insert-link id)))
