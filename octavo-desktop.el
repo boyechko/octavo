@@ -165,6 +165,8 @@ To quickly change this setting, call `octavo-desktop-add-toggle'."
 (defvar embark-multitarget-actions)
 (defvar embark-target-finders)
 (defvar embark-exporters-alist)
+(defvar octavo-file-map)
+(defvar octavo-id-map)
 
 (defun octavo-desktop-setup-embark ()
   "Setup Embark integration for `octavo-desktop'."

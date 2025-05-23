@@ -142,6 +142,8 @@ string appropriate for `octavo--format'."
 (defvar embark-multitarget-actions)
 (defvar embark-target-finders)
 (defvar embark-exporters-alist)
+(defvar octavo-file-map)
+(defvar octavo-id-map)
 
 (defun octavo-index-setup-embark ()
   "Setup Embark integration for `octavo-index'."
