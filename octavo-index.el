@@ -234,20 +234,20 @@ buffer with that name."
       (octavo-index-refresh nil nil nil buf-name)
       (pop-to-buffer buf-name))))
 
-(defvar octavo-index-last-sort-function nil
-  "The last-used sort function.")
+(defvar octavo-index-last-sort-method nil
+  "The last-used sort method (e.g. `octavo-index--sort-modified').")
+(defvar octavo-index-last-sort-descending nil
+  "Whether the last sorting operation was in descending order.")
 (defvar octavo-index-last-format-function nil
   "The last-used format function.")
 
-(defun octavo-index-refresh (&optional files format-fn sort-fn buf-name)
+(defun octavo-index-refresh (&optional files format-fn sort-method buf-name)
   "Refresh the Octavo-Index.
-Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
+Optionally refresh with FILES, using FORMAT-FN, SORT-METHOD, BUF-NAME."
   (interactive)
   (let ((inhibit-read-only t)
         (files (or files (octavo--directory-files 'full nil 'refresh)))
         (buf-name (or buf-name octavo-index-buffer-name)))
-    (setq octavo-index-last-format-function format-fn
-          octavo-index-last-sort-function sort-fn)
     (setq-local default-directory (expand-file-name octavo-directory))
     (unless (get-buffer buf-name)
       (when octavo-default-backlink
@@ -258,7 +258,7 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
       (let ((line (line-number-at-pos)))
         (setq-local truncate-lines t)
         (erase-buffer)
-        (octavo-index--populate-index files format-fn sort-fn)
+        (octavo-index--populate-index files format-fn sort-method)
         (goto-char (point-min))
         (unless (octavo-index-narrowed-p buf-name)
           (octavo-index--query-reset)
@@ -271,11 +271,14 @@ Optionally refresh with FILES, using FORMAT-FN, SORT-FN, BUF-NAME."
     'action 'octavo-index--button-action
     'face 'default))
 
-(defun octavo-index--populate-index (files &optional format-fn sort-fn)
+(defun octavo-index--populate-index (files &optional format-fn sort-method)
   "Populate the current buffer with Octavo-Index candidates.
-FILES are sorted with SORT-FN (or `octavo-index--sort-modified')
+FILES are sorted with SORT-METHOD (or `octavo-index--sort-modified')
 and formatted with FORMAT-FN (or `octavo-index-format-function')."
-  (let* ((sort-fn (or sort-fn 'octavo-index--sort-modified))
+  (let* ((sort-method (or sort-method
+                          octavo-index-last-sort-method
+                          'octavo-index--sort-modified))
+         (sort-fn (funcall sort-method octavo-index-last-sort-descending))
          (format-fn (or format-fn octavo-index-format-function))
          (candidates (nreverse (funcall format-fn (funcall sort-fn files))))
          (count 0))
@@ -288,6 +291,8 @@ and formatted with FORMAT-FN (or `octavo-index-format-function')."
                             'help-echo (when octavo-index-help-echo
                                          (octavo-index--help-echo .file .label)))
         (setq count (1+ count))))
+    (setq octavo-index-last-format-function format-fn
+          octavo-index-last-sort-method sort-method)
     (octavo-index-mode)
     (octavo-index--set-mode-name (format " [%d]" count))))
 
@@ -347,7 +352,7 @@ represented by the button."
   (if (eq major-mode 'octavo-index-mode)
       (octavo-index-refresh (octavo-index-query-files regexp 'search)
                             octavo-index-last-format-function
-                            octavo-index-last-sort-function
+                            octavo-index-last-sort-method
                             (buffer-name))
     (user-error "Not in an Octavo-Index buffer")))
 
@@ -362,7 +367,7 @@ represented by the button."
   (if (eq major-mode 'octavo-index-mode)
       (octavo-index-refresh (octavo-index-query-files regexp 'focus)
                         octavo-index-last-format-function
-                        octavo-index-last-sort-function
+                        octavo-index-last-sort-method
                         (buffer-name))
     (user-error "Not in a Octavo-Index")))
 
@@ -406,7 +411,7 @@ QUERY-TYPE can be either `FOCUS (filename only) or
     (unless (stringp files)
       (octavo-index-refresh files
                             nil
-                            octavo-index-last-sort-function)
+                            octavo-index-last-sort-method)
       (setq mode-name mode))))
 
 (defun octavo-index-query-mode-line (query-type regexp)
@@ -469,14 +474,22 @@ between those positions, inclusive."
   "Sort the index using SORT-FN and update mode name with SORT-NAME.
 SORT-FN is a function that takes a list of files and returns a sorted list.
 SORT-NAME is a string describing the sort type."
-  (if (eq major-mode 'octavo-index-mode)
-      (progn
-        (octavo-index-refresh (octavo-index--current-file-list)
-                              octavo-index-last-format-function
-                              sort-fn
-                              (buffer-name))
-        (octavo-index--set-mode-name (format " by %s" sort-name)))
-    (user-error "Not in a Octavo-Index")))
+  (unless (eq major-mode 'octavo-index-mode)
+    (user-error "Not in an Octavo-Index buffer"))
+  ;; TODO: A way to toggle descending sort only if the sort method is the same?
+  (setq octavo-index-last-sort-descending
+    (not octavo-index-last-sort-descending))
+  (setq octavo-index-last-sort-name
+    (format " by %s%s"
+            sort-name
+            (if octavo-index-last-sort-descending
+                " (desc)"
+              "")))
+  (octavo-index-refresh (octavo-index--current-file-list)
+                        octavo-index-last-format-function
+                        sort-fn
+                        (buffer-name))
+  (octavo-index--set-mode-name octavo-index-last-sort-name))
 
 (defun octavo-index-sort-modified ()
   "Sort index by last modified time."
@@ -505,36 +518,49 @@ SORT-NAME is a string describing the sort type."
           (push (button-get button 'button-data) files)))
       files)))
 
-(defun octavo-index--sort-files (files key-fn comparator-fn)
-  "Sort FILES based on a key function and comparator.
+(defun octavo-index--sort-function (key-fn comparator-fn)
+  "Return a sort function accepting a list of files.
 KEY-FN is a function that computes the sorting key for each file.
 COMPARATOR-FN is a function that compares two keys."
-  (let ((ht (make-hash-table :test #'equal :size 5000)))
-    (dolist (file files)
-      (puthash file (funcall key-fn file) ht))
-    (sort files
-          (lambda (a b)
-            (funcall comparator-fn (gethash a ht) (gethash b ht))))))
+  (lambda (files)
+    (let ((ht (make-hash-table :test #'equal :size 5000)))
+      (dolist (file files)
+        (puthash file (funcall key-fn file) ht))
+      (sort files
+            (lambda (a b)
+              (let ((ka (gethash a ht))
+                    (kb (gethash b ht)))
+                (funcall comparator-fn ka kb)))))))
 
-(defun octavo-index--sort-created (files)
-  "Sort FILES in ascending alphabetical order by ID."
-  (octavo-index--sort-files files
-                            (lambda (file) (car (octavo--parse-file file)))
-                            #'string<))
+(defun octavo--complement (func)
+  "Return a function that is a complement of FUNC."
+  (lambda (&rest args)
+    (format "Complement of `%s'." (symbol-name func))
+    (not (apply func args))))
 
-(defun octavo-index--sort-modified (files)
-  "Sort FILES for latest modification."
-  (octavo-index--sort-files files
-                            (lambda (file)
-                              (file-attribute-modification-time (file-attributes file)))
-                            #'time-less-p))
+;; Define sort methods
 
-(defun octavo-index--sort-size (files)
-  "Sort FILES by size."
-  (octavo-index--sort-files files
-                            (lambda (file)
-                              (file-attribute-size (file-attributes file)))
-                            #'>))
+(defun octavo-index--sort-created (&optional descending)
+  "Return a function to sort alphabetically by filename.
+If DESCENDING is non-nil, sort in descending order."
+  (octavo-index--sort-function (lambda (file) (car (octavo--parse-file file)))
+                               (if descending #'string> #'string<)))
+
+(defun octavo-index--sort-modified (&optional descending)
+  "Return a function to sort by modification time.
+If DESCENDING is non-nil, sort in descending order."
+  (octavo-index--sort-function (lambda (file)
+                                 (file-attribute-modification-time (file-attributes file)))
+                               (if descending
+                                   (octavo--complement #'time-less-p)
+                                 #'time-less-p)))
+
+(defun octavo-index--sort-size (&optional descending)
+  "Return a function to sort by file size.
+If DESCENDING is non-nil, sort in descending order."
+  (octavo-index--sort-function (lambda (file)
+                                 (file-attribute-size (file-attributes file)))
+                               (if descending #'< #'>)))
 
 ;;; Octavo-Index Keymap Commands
 
