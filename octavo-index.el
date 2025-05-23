@@ -106,6 +106,7 @@ string appropriate for `octavo--format'."
     (define-key map (kbd "n") #'octavo-index-next-line)
     (define-key map (kbd "p") #'octavo-index-previous-line)
     (define-key map (kbd "v") #'octavo-index-view-note)
+    (define-key map (kbd "k") #'octavo-index-kill-buffer)
     (define-key map (kbd "o") #'other-window)
     (define-key map (kbd "f") #'octavo-index-focus)
     (define-key map (kbd "s") #'octavo-index-search)
@@ -591,6 +592,16 @@ If DESCENDING is non-nil, sort in descending order."
     (funcall octavo-index-display-buffer-function buffer)
     (setq-local octavo-index-view--kill kill)
     (octavo-index-view-mode)))
+
+(defun octavo-index-kill-buffer ()
+  "Kill any currently opened buffers for the note at point."
+  (interactive)
+  (when-let ((button (octavo-index--button-at-point))
+             (line (line-number-at-pos)))
+    (kill-buffer (get-file-buffer (button-get button 'file)))
+    (octavo-index-current-notes)
+    (goto-char (point-min))
+    (forward-line (1- line))))
 
 (defun octavo-index-current-notes ()
   "Open Octavo-Index listing currently open notes."
