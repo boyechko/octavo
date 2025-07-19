@@ -41,6 +41,17 @@
  '(octavo-index-format "%t [[%i]]")
  '(octavo-directory-recursive t))
 
+(defmacro defun-in-dir (name directory)
+  "Define function NAME that will return a pathname relative to DIRECTORY."
+  `(defun ,name (&optional path)
+     ,(format "Return absolute pathname of relative PATH in %s."
+              (eval directory))
+     (if path
+         (expand-file-name path ,directory)
+       (file-name-as-directory ,directory))))
+
+(defun-in-dir in-crispy-memory (getenv "ZETTEL_DIR"))
+
 (defvar octavo-tests-environments
   '((:many-in-subdirs
      (octavo-directory "~/.emacs.d/straight/repos/octavo/tests/sandbox/many-in-subdirs")
@@ -58,20 +69,21 @@
      (octavo-directory-recursive nil)
      (octavo-subdirectory-function nil))
     (:numerus
-     (octavo-directory (file-name-concat (getenv "ZETTEL_DIR")
-                                     (file-name-as-directory "numerus")))
-     (octavo-subdirectory-function #'ezeka-subdirectory)
-     (octavo-id-regexp "\\([a-z]-[0-9]\\{4\\}\\)"))
+     (octavo-directory (in-crispy-memory "numerus/"))
+     (octavo-subdirectory-function (ezeka-kasten-subdir-func (ezeka-kasten "numerus")))
+     (octavo-id-regexp "\\([a-z0-9T~-]\\{6,13\\}\\)"))
     (:tempus
-     (octavo-directory (file-name-concat (getenv "ZETTEL_DIR")
-                                     (file-name-as-directory "tempus")))
-     (octavo-subdirectory-function #'ezeka-subdirectory)
-     (octavo-id-regexp "\\([0-9T]\\{13\\}\\)"))
+     (octavo-directory (in-crispy-memory "tempus/"))
+     (octavo-subdirectory-function (ezeka-kasten-subdir-func (ezeka-kasten "tempus")))
+     (octavo-id-regexp "\\([a-z0-9T~-]\\{6,13\\}\\)"))
+    (:tempus2013
+     (octavo-directory (in-crispy-memory "tempus/2013/"))
+     (octavo-subdirectory-function (ezeka-kasten-subdir-func (ezeka-kasten "tempus")))
+     (octavo-id-regexp "\\([a-z0-9T~-]\\{6,13\\}\\)"))
     (:scriptum
-     (octavo-directory (file-name-concat (getenv "ZETTEL_DIR")
-                                     (file-name-as-directory "scriptum")))
-     (octavo-subdirectory-function #'ezeka-subdirectory)
-     (octavo-id-regexp "\\([a-z]-[0-9]\\{4\\}~[0-9][0-9]\\)")))
+     (octavo-directory (in-crispy-memory "scriptum/"))
+     (octavo-subdirectory-function (ezeka-kasten-subdir-func (ezeka-kasten "scriptum")))
+     (octavo-id-regexp "\\([a-z0-9T~-]\\{6,13\\}\\)")))
   "Description of my testing environments.
 Each item has the form of (:name varlist)")
 
@@ -141,7 +153,7 @@ Additional variables can be defined in VARLIST"
 
 (ert-deftest octavo--file-id ()
   (with-octavo-tests-environment :tempus ()
-    (with-current-buffer "tests-octavo.el"
+    (with-current-buffer "octavo-tests.el"
       (should-not (octavo--file-id buffer-file-name)))
     (let* ((file (car (octavo-tests-sample-files-for :tempus))))
       (should (string= (octavo--file-id file) "20220812T2046")))))
