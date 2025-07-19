@@ -1012,12 +1012,19 @@ Select TAG, with completion, from list of all tags in Octavo notes."
 (defun octavo--unlinked-notes-list ()
   "Return list of IDs for notes that no notes link to."
   (let* ((all-link-ids (octavo--grep-link-id-list))
-         (all-ids (octavo--id-list)))
-    (remq nil (mapcar
-               (lambda (x)
-                 (when (not (member x all-link-ids))
-                   x))
-               all-ids))))
+         (links-hash (octavo--ids-hash-table all-link-ids))
+         (all-notes (octavo--directory-files)))
+    (remove-if (lambda (note)
+                 (gethash (octavo--file-id note) links-hash))
+               all-notes)))
+
+(defun octavo--ids-hash-table (ids)
+  "Return a simple hash table of IDS."
+  (let ((table (make-hash-table :test #'equal)))
+    (mapc (lambda (id)
+            (setf (gethash id table) (random 10000)))
+          ids)
+    table))
 
 ;;;###autoload
 (defun octavo-unlinked-notes ()

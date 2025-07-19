@@ -289,6 +289,20 @@ Additional variables can be defined in VARLIST"
              (benchmark-run 1000 (octavo--singleton-p files))))))
 
 ;;;=============================================================================
+;;; Unlinked Notes (2025-07-19)
+;;;=============================================================================
+
+(ert-deftest octavo--ids-hash-table ()
+  (let ((table (octavo--ids-hash-table '("a-1234" "b-2345" "c-3456"))))
+    (should (eq 'hash-table (type-of table)))
+    (should (gethash "b-2345" table))
+    (should-not (gethash "d-4567" table))))
+
+(ert-deftest octavo-unlinked-notes ()
+  (let ((unlinked (octavo-unlinked-notes)))
+    (should (= (length unlinked) 1))))
+
+;;;=============================================================================
 ;;; octavo--processor
 ;;;=============================================================================
 
