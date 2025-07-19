@@ -441,25 +441,82 @@ regexp instead. See manual page `re_format(7)' for details."
         (replace-regexp-in-string "\\\\\\([(){}+|]\\)" "\\1" result)))
     result))
 
+(defcustom octavo-use-ripgrep 'auto
+  "Whether to use ripgrep instead of egrep for searching.
+- t: Always use ripgrep (error if not available)
+- nil: Never use ripgrep, always use egrep
+- auto: Use ripgrep if available, fall back to egrep"
+  :type '(choice (const :tag "Always use ripgrep" t)
+                 (const :tag "Never use ripgrep" nil)
+                 (const :tag "Use ripgrep if available" auto))
+  :group 'octavo)
+
+(defun octavo--ripgrep-available-p ()
+  "Check if ripgrep is available."
+  (executable-find "rg"))
+
+(defun octavo--build-ripgrep-command (regexp directory other-options)
+  "Build ripgrep command equivalent to egrep command.
+See `octavo--grep-command' for details about REGEXP,
+DIRECTORY, and OTHER-OPTIONS."
+  (let ((file-extension (if (string-prefix-p "." octavo-file-extension)
+                            (substring octavo-file-extension 1)
+                          octavo-file-extension)))
+    (string-join
+     (append (list "rg"
+                   "--no-heading"
+                   "--ignore-case"
+                   (format "--type-add=octavo:'*.%s'" file-extension)
+                   "--type=octavo"
+                   "--regexp" (shell-quote-argument (octavo--posix-regexp regexp))
+                   (or directory octavo-directory)
+                   "2>/dev/null")
+             ;; Convert egrep options to ripgrep equivalents
+             (mapcar (lambda (opt)
+                       (cond
+                        ((string= opt "--only-matching") "--only-matching")
+                        ((string= opt "--no-filename") "--no-filename")
+                        ((string= opt "--with-filename") "--with-filename")
+                        ((string= opt "--line-number") "--line-number")
+                        ((string= opt "--count") "--count")
+                        (t opt)))       ; pass through unknown options
+                     other-options))
+     " ")))
+
+(defun octavo--should-use-ripgrep-p ()
+  "Determine whether to use ripgrep based on settings and availability."
+  (cond ((eq octavo-use-ripgrep t)
+         (if (octavo--ripgrep-available-p)
+             t
+           (error "Ripgrep requested but not available")))
+        ((eq octavo-use-ripgrep nil) nil)
+        ((eq octavo-use-ripgrep 'auto) (octavo--ripgrep-available-p))
+        (t nil)))
+
 (defun octavo--grep-command (regexp &optional directory other-options)
   "Return a list of files in DIRECTORY containing REGEXP.
 If not given, DIRECTORY defaults to `octavo-directory'.
 OTHER-OPTIONS should be a list of strings that will be
-passed directly to `egrep' command."
-  (split-string
-   (shell-command-to-string
-    (string-join
-     (append (list "egrep"
-                   "--recursive"
-                   "--ignore-case"
-                   (concat "--include=\\*." octavo-file-extension)
-                   (concat "--regexp="
-                           (shell-quote-argument (octavo--posix-regexp regexp)))
-                   (or directory octavo-directory)
-                   "2>/dev/null")
-             other-options)
-     " "))
-   "\n" 'omit-nulls "\s"))
+passed directly to the search command.
+
+Uses ripgrep if available and enabled, otherwise falls back to egrep."
+  (let ((cmd (if (octavo--should-use-ripgrep-p)
+                 (octavo--build-ripgrep-command regexp directory other-options)
+               ;; Original egrep command
+               (string-join
+                (append (list "egrep"
+                              "--recursive"
+                              "--ignore-case"
+                              (concat "--include=\\*." octavo-file-extension)
+                              (concat "--regexp="
+                                      (shell-quote-argument (octavo--posix-regexp regexp)))
+                              (or directory octavo-directory)
+                              "2>/dev/null")
+                        other-options)
+                " "))))
+    (split-string
+     (shell-command-to-string cmd)
+     "\n" 'omit-nulls "\s")))
 
 (defun octavo--grep-file-list (regexp &optional invert directory)
   "Return a list of files in DIRECTORY containing REGEXP.
@@ -979,7 +1036,8 @@ Select TAG, with completion, from list of all tags in Octavo notes."
       (funcall octavo-tag-insert-function tag))))
 
 ;;; Find Dead Links and Unlinked Notes
-(defun octavo--grep-link-id-list ()
+
+(defun octavo--grep-link-id-list  ()
   "Return list of IDs that are linked to in any Octavo file."
   (mapcar (lambda (link)
             (when (string-match octavo-id-regexp link)

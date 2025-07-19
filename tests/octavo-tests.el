@@ -619,7 +619,6 @@ in an internal loop."
               (garbage-collect)
               (octavo-index-query-files/rb "humor" 'octavo-index-search)))))
 
-
 ;;;=============================================================================
 ;;; Regexps (pull request #63; 2023-07-14)
 ;;;=============================================================================
@@ -757,6 +756,33 @@ The return consists of DESCRIPTION and return of
         (insert (mapconcat #'identity (nreverse results) "\n"))
         (goto-char (point-max)))
       (switch-to-buffer-other-window "*ERT Results*"))))
+
+;;;=============================================================================
+;;; Ripgrep (2025-07-19)
+;;;=============================================================================
+
+(defun octavo--benchmark-grep-performance ()
+  "Benchmark egrep vs ripgrep performance."
+  (interactive)
+  (when (octavo--ripgrep-available-p)
+    (let ((test-regexp (octavo-link-regexp))
+          (test-options '("--only-matching" "--no-filename")))
+
+      ;; Test egrep
+      (message "Testing egrep...")
+      (let ((egrep-time (benchmark-run 1
+                          (let ((octavo-use-ripgrep nil))
+                            (octavo--grep-command test-regexp octavo-directory test-options)))))
+
+        ;; Test ripgrep
+        (message "Testing ripgrep...")
+        (let ((ripgrep-time (benchmark-run 1
+                              (let ((octavo-use-ripgrep t))
+                                (octavo--grep-command test-regexp octavo-directory test-options)))))
+
+          (message "egrep time: %.2f seconds" (car egrep-time))
+          (message "ripgrep time: %.2f seconds" (car ripgrep-time))
+          (message "ripgrep is %.1fx faster" (/ (car egrep-time) (car ripgrep-time))))))))
 
 ;;;=============================================================================
 ;;; octavo-index-octavo-index--current-id-list
