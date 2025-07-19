@@ -310,9 +310,15 @@ Additional variables can be defined in VARLIST"
     (should (gethash "b-2345" table))
     (should-not (gethash "d-4567" table))))
 
-(ert-deftest octavo-unlinked-notes ()
-  (let ((unlinked (octavo-unlinked-notes)))
-    (should (= (length unlinked) 1))))
+(ert-deftest octavo--unlinked-notes-list ()
+  (with-octavo-tests-environment :tempus2013 ()
+    (let ((unlinked (octavo--unlinked-notes-list)))
+      (should (= 8 (length unlinked))))))
+
+(ert-deftest octavo--grep-link-id-list ()
+  (with-octavo-tests-environment :tempus2013 ()
+    (should (= 16 (length (octavo--grep-link-id-list))))
+    (should-not (member "20120415T1000" (octavo--grep-link-id-list)))))
 
 ;;;=============================================================================
 ;;; octavo--processor
@@ -493,6 +499,10 @@ ARG can be octavo-file or octavo-id as string or list, single or multiple."
     ((file (car (octavo-tests-sample-files-for :standard))))
     (should (string= (file-name-base (octavo--id-file "202206052002"))
                      (file-name-base file)))))
+
+(ert-deftest octavo--id-file ()
+  (with-octavo-tests-environment :tempus ()
+    (should (file-exists-p (octavo--id-file "20120415T1000")))))
 
 ;;;=============================================================================
 ;;; octavo--parse-id (2023-06-30)
