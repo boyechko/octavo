@@ -610,11 +610,23 @@ If DESCENDING is non-nil, sort in descending order."
         (notes (octavo--current-notes-list)))
     (if (not notes)
         (user-error "There are no current notes")
-      (octavo-index-refresh
-       (octavo--current-notes-list)
-       octavo-index-last-format-function
-       octavo-index-last-sort-method
-       buf-name)
+      (octavo-index-refresh notes
+                            octavo-index-last-format-function
+                            octavo-index-last-sort-method
+                            buf-name)
+      (switch-to-buffer buf-name))))
+
+(defun octavo-index-unlinked-notes ()
+  "Open Octavo-Index listing unlinked notes."
+  (interactive)
+  (let ((buf-name "*Octavo-Index: Unlinked*")\
+        (notes (octavo--unlinked-notes-list)))
+    (if (not notes)
+        (user-error "There are no unlinked notes")
+      (octavo-index-refresh notes
+                            octavo-index-last-format-function
+                            octavo-index-last-sort-method
+                            buf-name)
       (switch-to-buffer buf-name))))
 
 (defun octavo-index--button-at-point (&optional pos)
